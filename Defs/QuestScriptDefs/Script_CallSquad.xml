@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Based on Royalty Permit_CallLaborers -->
+<Defs>
+	<QuestScriptDef>
+		<defName>FC_SquadDeploy</defName>
+		<isRootSpecial>true</isRootSpecial>
+		<autoAccept>true</autoAccept>
+		<defaultHidden>true</defaultHidden>
+		<questDescriptionAndNameRules>
+			<rulesStrings>
+				<li>questName->FCSquadDeploy</li>
+				<li>questDescription-></li>
+			</rulesStrings>
+		</questDescriptionAndNameRules>
+		<root Class="QuestNode_Sequence">
+			<nodes>
+				<!-- Deploys the squad, including faction changes and arrival. -->
+				<li Class="FactionColonies.QuestNode_DeploySquad">
+					<squad>$squad</squad>
+					<arrivalMode>$arrivalMode</arrivalMode>
+					<map>$map</map>
+					<location>$location</location>
+				</li>
+				<!-- Lock their apparel -->
+				<li Class="QuestNode_SetAllApparelLocked">
+					<pawns>$pawns</pawns>
+				</li>
+				<li Class="QuestNode_Signal">
+					<inSignal>undeploy</inSignal>
+					<node Class="QuestNode_End"/>
+				</li>
+			</nodes>
+		</root>
+	</QuestScriptDef>
+</Defs> 

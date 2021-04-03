@@ -1322,15 +1322,7 @@ namespace FactionColonies
 
 		}
 	}
-
-
-
-
-
-
-
-
-
+	
 	class militaryCustomizationWindowFC : Window
     {
 		int tab = 1;
@@ -1434,11 +1426,11 @@ namespace FactionColonies
 			Rect helpButton = new Rect(760, 0, 30, 30);
 
 			
-			if (Widgets.ButtonImage(helpButton, texLoad.questionmark))
+			if (Widgets.ButtonImage(helpButton, TexLoad.questionmark))
 			{
 				string header = "Help! What is this for?";
 				string description = "Need Help with this menu? Go to this youtube video: https://youtu.be/lvWb1rMMsq8";
-				Find.WindowStack.Add(new descWindowFC(description, header));
+				Find.WindowStack.Add(new DescWindowFc(description, header));
 			}
 
 			if (Widgets.ButtonTextSubtle(milDesigination, "Military Designations"))
@@ -1527,7 +1519,7 @@ namespace FactionColonies
 					//click on settlement name
 					if(Widgets.ButtonTextSubtle(new Rect(SettlementName.x, SettlementName.y + (SettlementBox.height + settlementYSpacing) * count + scroll, SettlementName.width, SettlementName.height), settlement.name))
 					{
-						Find.WindowStack.Add(new settlementWindowFC(settlement));
+						Find.WindowStack.Add(new SettlementWindowFc(settlement));
 					}
 					Widgets.Label(new Rect(MilitaryLevel.x, MilitaryLevel.y + (SettlementBox.height + settlementYSpacing) * count + scroll, MilitaryLevel.width, MilitaryLevel.height*2), "Mil Level: " + settlement.settlementMilitaryLevel + " - Max Squad Cost: " + FactionColonies.calculateMilitaryLevelPoints(settlement.settlementMilitaryLevel));
 					if(settlement.militarySquad != null)
@@ -1879,7 +1871,7 @@ namespace FactionColonies
 
 				for (int k = 0; k < 30; k++)
 				{
-					if(Widgets.ButtonImage(new Rect(UnitStandBase.x + ((k%6) * 80),  UnitStandBase.y + (k - k%6)/5 * 70, 50, 20), texLoad.unitCircle))
+					if(Widgets.ButtonImage(new Rect(UnitStandBase.x + ((k%6) * 80),  UnitStandBase.y + (k - k%6)/5 * 70, 50, 20), TexLoad.unitCircle))
 					{
 						int click = k;
 						List<FloatMenuOption> Units = new List<FloatMenuOption>();
