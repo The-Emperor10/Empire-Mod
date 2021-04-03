@@ -114,6 +114,8 @@ namespace FactionColonies
         // Returns whether or not a settlement would be built to.
         public static bool IsValidRoadTarget(Settlement settlement)
         {
+            if (settlement == null)
+                return false;
             FactionFC fC = Find.World.GetComponent<FactionFC>();
 
             // If faction exists and is either player or player has roadBuilders and the faction is an ally

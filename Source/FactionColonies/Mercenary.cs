@@ -7,6 +7,7 @@ using UnityEngine;
 using RimWorld;
 using Verse;
 using RimWorld.Planet;
+using RimWorld.QuestGen;
 
 namespace FactionColonies
 {
@@ -21,13 +22,8 @@ namespace FactionColonies
         public Pawn pawn;
         public bool deployable = false;
         public int loadID;
-        
 
-
-        public Mercenary()
-        {
-
-        }
+        public Mercenary() { }
 
         public Mercenary(bool blank)
         {
@@ -41,17 +37,14 @@ namespace FactionColonies
             Scribe_References.Look<SettlementFC>(ref settlement, "settlement");
             Scribe_References.Look<Mercenary>(ref handler, "handler");
             Scribe_References.Look<Mercenary>(ref animal, "animal");
-            Scribe_Deep.Look<Pawn>(ref pawn, "pawn");
             Scribe_Values.Look<int>(ref loadID, "loadID");
-
+            Scribe_References.Look<Pawn>(ref pawn, "pawn");
         }
 
         public string GetUniqueLoadID()
         {
             return "Mercenary_" + this.loadID;
         }
-
-
     }
 
 

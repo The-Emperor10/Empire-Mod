@@ -10,6 +10,7 @@ using Verse;
 using Verse.AI.Group;
 using RimWorld.Planet;
 using HarmonyLib;
+using RimWorld.QuestGen;
 
 namespace FactionColonies
 {
@@ -279,56 +280,15 @@ namespace FactionColonies
 				}
 			}
 			return null;
-		}
-		public List<Mercenary> AllMercenaries
-		{
-			get
-			{
-				List<Mercenary> list = new List<Mercenary>();
-				foreach (MercenarySquadFC squad in mercenarySquads)
-				{
-					list.AddRange(squad.mercenaries);
-					if (squad.animals != null && squad.animals.Count > 0)
-					{
-						list.AddRange(squad.animals);
-					}
-				}
-				
-				return list;
-			}
-		}
+        }
 
-		public List<MercenarySquadFC> DeployedSquads
-		{
-			get
-			{
-				List<MercenarySquadFC> list = new List<MercenarySquadFC>();
-				foreach(MercenarySquadFC squad in mercenarySquads)
-				{
-					if (squad.isDeployed == true)
-					{
-						list.Add(squad);
-					}
-				}
-				return list;
-			}
-		}
+        public IEnumerable<Mercenary> AllMercenaries => mercenarySquads.SelectMany(squad => squad.mercenaries.Concat(squad.animals));
 
-		public List<Pawn> AllMercenaryPawns
-		{
-			get
-			{
-				List<Pawn> list = new List<Pawn>();
-				foreach (Mercenary merc in AllMercenaries)
-				{
-					list.Add(merc.pawn);
-				}
-				
-				return list;
-			}
-		}
+        public IEnumerable<MercenarySquadFC> DeployedSquads => this.mercenarySquads.FindAll(squad => squad.isDeployed);
 
-		public void resetSquads()
+        public IEnumerable<Pawn> AllMercenaryPawns => this.AllMercenaries.Select(mercenary => mercenary.pawn);
+
+        public void resetSquads()
 		{
 			squads = new List<MilSquadFC>();
 		}
@@ -681,8 +641,7 @@ namespace FactionColonies
 		public int tickChanged = 0;
 		public bool hasLord = false;
 		public Map map;
-		public Lord lord;
-
+        public Quest quest;
 
 
 		public void ExposeData()
@@ -706,10 +665,10 @@ namespace FactionColonies
 			Scribe_Values.Look<IntVec3>(ref orderLocation, "orderLocation");
 			Scribe_Values.Look<bool>(ref hasLord, "hasLord", false);
 			Scribe_References.Look<Map>(ref map, "map");
-			Scribe_References.Look<Lord>(ref lord, "lord");
-		}
+			Scribe_References.Look<Quest>(ref quest, "quest");
+        }
 
-		public string GetUniqueLoadID()
+        public string GetUniqueLoadID()
 		{
 			return "MercenarySquadFC_" + this.loadID;
 		}
@@ -719,112 +678,26 @@ namespace FactionColonies
 
 		}
 
-		public List<Mercenary> EquippedMercenaries
-		{
-			get
-			{
-				List<Mercenary> pawns = new List<Mercenary>();
-				foreach (Mercenary merc in mercenaries)
-				{
-					if ((merc.pawn.apparel.WornApparel.Count() > 0 || merc.pawn.equipment.AllEquipmentListForReading.Count() > 0 || merc.animal != null) && merc.deployable == true) {
-						pawns.Add(merc);
-					}
-				}
-				return pawns;
-			}
-		}
+        public IEnumerable<Mercenary> EquippedMercenaries => mercenaries.FindAll(merc => (merc.pawn.apparel.WornApparel.Any() || merc.pawn.equipment.AllEquipmentListForReading.Any() || merc.animal != null) && merc.deployable == true);
+        public IEnumerable<Pawn> EquippedMercenaryPawns => EquippedMercenaries.Select(merc => merc.pawn);
 
-		public List<Pawn> EquippedMercenaryPawns
-		{
-			get
-			{
-				List<Pawn> list = new List<Pawn>();
-				foreach (Mercenary merc in EquippedMercenaries)
-				{
-					list.Add(merc.pawn);
-				}
-				return list;
-			}
-		}
+        public IEnumerable<Mercenary> EquippedAnimalMercenaries => animals;
+        public IEnumerable<Pawn> EquippedAnimalMercenaryPawns => EquippedAnimalMercenaries.Select(animal => animal.pawn);
 
-		public List<Pawn> EquippedAnimalMercenaries
-		{
-			get
-			{
-				List<Pawn> list = new List<Pawn>();
-				foreach (Mercenary animal in animals)
-				{
-					list.Add(animal.pawn);
-				}
-				return list;
-			}
-		}
+        public IEnumerable<Mercenary> AllEquippedMercenaries => EquippedMercenaries.Concat(EquippedAnimalMercenaries);
+        public IEnumerable<Pawn> AllEquippedMercenaryPawns => AllEquippedMercenaries.Select(merc => merc.pawn);
 
-		public List<Pawn> AllEquippedMercenaryPawns
-		{
-			get
-			{
-				List<Pawn> list = new List<Pawn>();
-				foreach (Mercenary merc in EquippedMercenaries)
-				{
-					list.Add(merc.pawn);
-				}
-				list.AddRange(EquippedAnimalMercenaries);
-				return list;
-			}
-		}
+        public IEnumerable<Mercenary> DeployedMercenaries => mercenaries.FindAll(merc => merc.pawn.Map != null);
+        public IEnumerable<Pawn> DeployedMercenaryPawns => DeployedMercenaries.Select(merc => merc.pawn);
 
-		public List<Pawn> AllDeployedMercenaryPawns
-		{
-			get
-			{
-				List<Pawn> list = new List<Pawn>();
-				foreach (Mercenary merc in DeployedMercenaries)
-				{
-					list.Add(merc.pawn);
-				}
-				foreach (Mercenary animal in DeployedMercenaryAnimals)
-				{
-					list.Add(animal.pawn);
-				}
-				return list;
-			}
-		}
+        public IEnumerable<Mercenary> DeployedAnimalMercenaries => animals.FindAll(animal => animal.pawn.Map != null);
+        public IEnumerable<Pawn> DeployedAnimalMercenaryPawns => DeployedAnimalMercenaries.Select(animal => animal.pawn);
 
-		public List<Mercenary> DeployedMercenaries
-		{
-			get
-			{
-				List<Mercenary> pawns = new List<Mercenary>();
-				foreach (Mercenary merc in mercenaries)
-				{
-					if (merc.pawn.Map != null)
-					{
-						pawns.Add(merc);
-					}
-				}
-				return pawns;
-			}
-		}
+        public IEnumerable<Mercenary> AllDeployedMercenaries => DeployedMercenaries.Concat(DeployedAnimalMercenaries);
+        public IEnumerable<Pawn> AllDeployedMercenaryPawns => AllDeployedMercenaries.Select(merc => merc.pawn);
 
-		public List<Mercenary> DeployedMercenaryAnimals
-		{
-			get
-			{
-				List<Mercenary> pawns = new List<Mercenary>();
-				foreach (Mercenary merc in animals)
-				{
-					if (merc.pawn.Map != null)
-					{
-						pawns.Add(merc);
-					}
-				}
-				//Log.Message(pawns.Count.ToString());
-				return pawns;
-			}
-		}
 
-		public SettlementFC getSettlement
+        public SettlementFC getSettlement
 		{
 			get
 			{
@@ -918,7 +791,7 @@ namespace FactionColonies
 
 		public void removeDroppedEquipment()
 		{
-			while (DroppedApparel.Count() > 0)
+			while (DroppedApparel.Any())
 			{
 				Apparel apparel = DroppedApparel[0];
 				UsedApparelList.Remove(DroppedApparel[0]);
@@ -928,7 +801,7 @@ namespace FactionColonies
 				}
 			}
 
-			while (DroppedWeapons.Count() > 0)
+			while (DroppedWeapons.Any())
 			{
 				ThingWithComps weapon = DroppedWeapons[0];
 				UsedWeaponList.Remove(DroppedWeapons[0]);
@@ -990,6 +863,7 @@ namespace FactionColonies
 			merc.settlement = settlement;
 			//Log.Message(newPawn.Name + "   State: Dead - " + newPawn.health.Dead + "    Apparel Count: " + newPawn.apparel.WornApparel.Count());
 			merc.pawn = newPawn;
+            Find.WorldPawns.PassToWorld(newPawn);
 		}
 
 		public void updateSquadStats(int level)
@@ -1047,7 +921,7 @@ namespace FactionColonies
 			animals = new List<Mercenary>();
 			foreach (MilUnitFC loadout in outfit.units)
 			{ 
-				if ( mercenaries[count].pawn.kindDef != loadout.pawnKind || mercenaries[count].pawn.Dead == true)
+				if (mercenaries[count].pawn == null || mercenaries[count].pawn.kindDef != loadout.pawnKind || mercenaries[count].pawn.Dead == true)
 				{
 					Mercenary pawn = new Mercenary(true);
 					createNewPawn(ref pawn, loadout.pawnKind);
@@ -1242,9 +1116,72 @@ namespace FactionColonies
 			return null;
 		}
 
+        public void DeployTo(Map map, PawnsArrivalModeDef arrivalMode, IntVec3? location = null)
+        {
+            // TODO: move here
+            FactionFC fc = Find.World.GetComponent<FactionFC>();
 
+            /*SlateRef<MercenarySquadFC> squadRef = new SlateRef<MercenarySquadFC>("$squad");
+            SlateRef<IEnumerable<Pawn>> pawnsRef = new SlateRef<IEnumerable<Pawn>>("$pawns");
 
-	}
+            QuestScriptDef questScript = new QuestScriptDef
+            {
+                defaultHidden = true,
+                autoAccept = true,
+                isRootSpecial = true,
+                defName = null,
+            };
+
+            QuestNode_Sequence seq = new QuestNode_Sequence();
+            questScript.root = seq;
+
+            QuestNode_DeploySquad deploySquad = new QuestNode_DeploySquad
+            {
+                squad = squadRef,
+                arrivalMode = new SlateRef<PawnsArrivalModeDef>("$arrivalMode"),
+                map = new SlateRef<Map>("$map"),
+                location = new SlateRef<IntVec3?>("$location")
+            };
+            seq.nodes.Add(deploySquad);
+
+            QuestNode_SetAllApparelLocked apparelLocked = new QuestNode_SetAllApparelLocked()
+            {
+                pawns = pawnsRef
+            };
+            seq.nodes.Add(apparelLocked);
+
+            QuestNode_Signal signal = new QuestNode_Signal()
+            {
+                inSignal = "undeploy",
+                node = new QuestNode_End()
+            };
+            seq.nodes.Add(signal);
+            */
+            QuestScriptDef questScript = DefDatabase<QuestScriptDef>.GetNamed("FC_SquadDeploy");          
+
+            Slate slate = new Slate();
+
+            slate.Set("pawns", this.AllEquippedMercenaryPawns);
+            slate.Set("arrivalMode", arrivalMode);
+            slate.Set("faction", FactionColonies.getPlayerColonyFaction());
+            slate.Set("map", map);
+            slate.Set("squad", this);
+            slate.Set("location", location);
+
+            Quest generatedQuest = QuestUtility.GenerateQuestAndMakeAvailable(questScript, slate);
+            this.quest = generatedQuest;
+        }
+
+        public void Undeploy()
+        {
+            if (this.quest != null)
+            {
+                // Quest should do all the cleanup
+                quest.End(QuestEndOutcome.Unknown);
+                this.quest = null;
+            }
+        }
+    }
 
 	//Squad Class
 	public class MilSquadFC : IExposable, ILoadReferenceable
@@ -1608,7 +1545,7 @@ namespace FactionColonies
 					}
 
 
-					Widgets.Label(new Rect(isBusy.x, isBusy.y + (SettlementBox.height + settlementYSpacing) * count + scroll, isBusy.width, isBusy.height), "Available: " + (!settlement.isMilitaryBusySilent()));
+					Widgets.Label(new Rect(isBusy.x, isBusy.y + (SettlementBox.height + settlementYSpacing) * count + scroll, isBusy.width, isBusy.height), "Available: " + (!settlement.IsMilitaryBusySilent));
 
 					Text.Font = GameFont.Tiny;
 
@@ -1658,7 +1595,7 @@ namespace FactionColonies
 							options.Add(new FloatMenuOption("Walk into map", delegate { FactionColonies.CallinAlliedForces(settlement, false); Find.WindowStack.currentlyDrawnWindow.Close(); }));
 							//check if medieval only
 							bool medievalOnly = LoadedModManager.GetMod<FactionColoniesMod>().GetSettings<FactionColonies>().medievalTechOnly;
-							if (!medievalOnly && Find.ResearchManager.GetProgress(DefDatabase<ResearchProjectDef>.GetNamed("TransportPod", false)) == DefDatabase<ResearchProjectDef>.GetNamed("TransportPod", false).baseCost)
+							if (!medievalOnly && DefDatabase<ResearchProjectDef>.GetNamed("TransportPod", false).IsFinished)
 							{
 								options.Add(new FloatMenuOption("Drop-Pod", delegate { FactionColonies.CallinAlliedForces(settlement, true); Find.WindowStack.currentlyDrawnWindow.Close(); }));
 
@@ -1685,7 +1622,7 @@ namespace FactionColonies
 										}));
 									//check if medieval only
 									bool medievalOnly = LoadedModManager.GetMod<FactionColoniesMod>().GetSettings<FactionColonies>().medievalTechOnly;
-										if (!medievalOnly && Find.ResearchManager.GetProgress(DefDatabase<ResearchProjectDef>.GetNamed("TransportPod", false)) == DefDatabase<ResearchProjectDef>.GetNamed("TransportPod", false).baseCost)
+										if (!medievalOnly && DefDatabase<ResearchProjectDef>.GetNamed("TransportPod", false).IsFinished)
 										{
 											deployment.Add(new FloatMenuOption("Drop-Pod", delegate
 											{
@@ -1695,12 +1632,6 @@ namespace FactionColonies
 
 										}
 										Find.WindowStack.Add(new FloatMenu(deployment));
-
-
-
-
-
-
 									}
 									else
 									{
@@ -1711,7 +1642,7 @@ namespace FactionColonies
 								Find.WindowStack.Add(new FloatMenu(options));
 							} else
 							{
-								Messages.Message(TranslatorFormattedStringExtensions.Translate("XDaysToRedeploy", Math.Round(GenDate.TicksToDays((faction.traitMilitaristicTickLastUsedExtraSquad + GenDate.TicksPerDay*5) - Find.TickManager.TicksGame), 1)), MessageTypeDefOf.RejectInput);
+								Messages.Message("XDaysToRedeploy".Translate(Math.Round(((faction.traitMilitaristicTickLastUsedExtraSquad + GenDate.TicksPerDay * 5) - Find.TickManager.TicksGame).TicksToDays(), 1)), MessageTypeDefOf.RejectInput);
 							}
 						}
 

@@ -11,9 +11,146 @@ using HarmonyLib;
 using Verse.AI;
 using Verse.AI.Group;
 using System.IO;
+using RimWorld.QuestGen;
 
 namespace FactionColonies
 {
+    public class QuestNode_DeploySquad : QuestNode
+    {
+        public SlateRef<IntVec3?> location;
+        public SlateRef<MercenarySquadFC> squad;
+        public SlateRef<Map> map;
+        public SlateRef<PawnsArrivalModeDef> arrivalMode;
+        public SlateRef<string> inSignal;
+
+        protected override void RunInt()
+        {
+            Slate slate = QuestGen.slate;
+
+            MercenarySquadFC mercs = squad.GetValue(slate);
+            mercs.resetNeeds();
+            mercs.updateSquadStats(mercs.settlement.settlementMilitaryLevel);
+
+            Map spawnMap = map.GetValue(slate);
+
+            if (mercs == null)
+                throw new NullReferenceException("Empire - Squad is null. Report this.");
+
+            if (spawnMap == null)
+                throw new NullReferenceException("Empire - Map is null. Report this.");
+
+            if (mercs.isDeployed)
+                throw new InvalidOperationException("Empire - Attempted to deploy an already deployed squad, report this.");
+
+            QuestPart_DeploySquad deploySquad = new QuestPart_DeploySquad
+            {
+                arrivalMode = arrivalMode.GetValue(slate),
+                location = location.GetValue(slate),
+                map = spawnMap,
+                squad = mercs,
+                // This is how vanilla handles inSignal by default
+                inSignal = this.inSignal.GetValue(slate) ?? QuestGenUtility.HardcodedSignalWithQuestID(slate.Get<string>("inSignal"))
+            };
+
+            QuestPart_ExtraFaction extraFaction = new QuestPart_ExtraFaction
+            {
+                affectedPawns = mercs.AllEquippedMercenaryPawns.ToList(),
+                extraFaction = new ExtraFaction(FactionColonies.getPlayerColonyFaction(), ExtraFactionType.HomeFaction),
+                areHelpers = false,
+            };
+
+            QuestPart_Leave leave = new QuestPart_Leave
+            {
+                pawns = mercs.AllEquippedMercenaryPawns.ToList(),
+                leaveOnCleanup = true,
+                sendStandardLetter = false
+            };
+
+            QuestGen.quest.AddPart(deploySquad);
+            QuestGen.quest.AddPart(extraFaction);
+            QuestGen.quest.AddPart(leave);
+        }
+
+        protected override bool TestRunInt(Slate slate)
+        {
+            MercenarySquadFC mercs = squad.GetValue(slate);
+            return mercs != null && !mercs.isDeployed && mercs.settlement.IsMilitaryValid;
+        }
+    }
+
+    public class QuestPart_DeploySquad : QuestPart
+    {
+        public IntVec3? location;
+        public MercenarySquadFC squad;
+        public Map map;
+        public PawnsArrivalModeDef arrivalMode;
+        public string inSignal;
+
+        public override void Notify_QuestSignalReceived(Signal signal)
+        {
+            base.Notify_QuestSignalReceived(signal);
+            if (signal.tag != this.inSignal)
+                return;
+
+            IncidentParms parms = new IncidentParms
+            {
+                spawnCenter = location ?? IntVec3.Invalid,
+                target = map
+            };
+
+            squad.resetNeeds();
+            squad.updateSquadStats(squad.settlement.settlementMilitaryLevel);
+
+            squad.settlement.SendMilitary(Find.CurrentMap.Index, Find.World.info.name, SettlementFC.MilitaryJob.Deploy, 1, null);
+            squad.isDeployed = true;
+            squad.timeDeployed = Find.TickManager.TicksGame;
+
+            foreach(var i in squad.AllEquippedMercenaryPawns)
+            {
+                i.SetFaction(Find.FactionManager.OfPlayer);
+            }
+
+            if (!arrivalMode.Worker.TryResolveRaidSpawnCenter(parms))
+                throw new Exception("Empire - Failed to resolve spawn centers");
+
+            arrivalMode.Worker.Arrive(squad.AllEquippedMercenaryPawns.ToList(), parms);
+
+            if (!Find.WindowStack.IsOpen<EmpireUIMercenaryCommandMenu>())
+                Find.WindowStack.Add(new EmpireUIMercenaryCommandMenu());
+        }
+
+        public override void Cleanup()
+        {
+            base.Cleanup();
+            FactionFC fc = Find.World.GetComponent<FactionFC>();
+
+            foreach (var i in squad.AllEquippedMercenaryPawns)
+            {
+                i.SetFaction(FactionColonies.getPlayerColonyFaction());
+            }
+            squad.isDeployed = false;
+
+            if (!fc.militaryCustomizationUtil.DeployedSquads.Any())
+                Find.WindowStack.TryRemove(typeof(EmpireUIMercenaryCommandMenu));
+        }
+
+        public override void Notify_PawnKilled(Pawn pawn, DamageInfo? dinfo)
+        {
+            base.Notify_PawnKilled(pawn, dinfo);
+        }
+
+        public override void ExposeData()
+        {
+            base.ExposeData();
+            Scribe_Values.Look(ref inSignal, "inSignal");
+            Scribe_Values.Look(ref location, "location");
+            Scribe_Defs.Look(ref arrivalMode, "arrivalMode");
+            Scribe_References.Look(ref map, "map");
+            Scribe_References.Look(ref squad, "squad");
+        }
+
+    }
+
     public static class MilitaryAI
     {
 
@@ -28,34 +165,19 @@ namespace FactionColonies
 
 
             //Log.Message("1");
-            
-            foreach (Mercenary merc in squad.DeployedMercenaries)
-            { 
+            #region cc
 
+            foreach (Mercenary merc in squad.DeployedMercenaries)
+            {
                 //If pawn is deployed
                     deployed = true;
-                    if (!(squad.hitMap))
+                    if (!squad.hitMap)
                     {
                         squad.hitMap = true;
                     }
 
                     if (merc.pawn.health.State == PawnHealthState.Mobile)
                     {
-
-                        //if pawn is up and moving
-                        if (squad.order != null && squad.order != MilitaryOrders.Leave)
-                        {
-                            if (squad.timeDeployed + 30000 >= Find.TickManager.TicksGame && merc.pawn.Faction != playerFaction)
-                                merc.pawn.SetFaction(playerFaction);
-                        } else
-                        {
-                            if (merc.pawn.drafter != null)
-                                merc.pawn.drafter.Drafted = false;
-                            if (merc.pawn.Faction != settlementFaction)
-                                merc.pawn.SetFaction(settlementFaction);
-                        }
-
-
                         JobGiver_AIFightEnemies jobGiver = new JobGiver_AIFightEnemies();
                         ThinkResult result = jobGiver.TryIssueJobPackage(merc.pawn, new JobIssueParams());
                         bool isValid = result.IsValid;
@@ -111,18 +233,6 @@ namespace FactionColonies
                                         }
                                     }
                                     else
-                                    if (squad.order == MilitaryOrders.Leave)
-                                    {
-                                        JobGiver_ExitMapBest jobGiver_Rescue = new JobGiver_ExitMapBest();
-                                        ThinkResult resultLeave = jobGiver_Rescue.TryIssueJobPackage(merc.pawn, new JobIssueParams());
-                                        bool isValidLeave = resultLeave.IsValid;
-
-                                        if (isValidLeave)
-                                        {
-                                            merc.pawn.jobs.StartJob(resultLeave.Job, JobCondition.InterruptForced);
-                                        }
-                                    }
-                                    else
                                     if (squad.order == MilitaryOrders.RecoverWounded)
                                     {
                                         JobGiver_RescueNearby jobGiver_Rescue = new JobGiver_RescueNearby();
@@ -136,17 +246,10 @@ namespace FactionColonies
                                     }
                                 }
                             }
-                            else
-                            {
-                                if (merc.pawn.drafter != null)
-                                    merc.pawn.drafter.Drafted = false;
-                                if (merc.pawn.Faction != settlementFaction)
-                                    merc.pawn.SetFaction(settlementFaction);
-                            }
                         }
 
 
-
+                        
                         //end of if pawn is mobile
                     }
                     else 
@@ -166,16 +269,11 @@ namespace FactionColonies
 
                         }
                     }
-
-                
-
-                
-               
             }
-
+            #endregion cc
 
             //Log.Message("2");
-            foreach (Mercenary animal in squad.DeployedMercenaryAnimals)
+            foreach (Mercenary animal in squad.DeployedAnimalMercenaries)
             {
                 //if on map
                 deployed = true;
@@ -227,46 +325,7 @@ namespace FactionColonies
                             }
                         }
                     }
-
-
-
                 }
-
-            }
-
-            if (deployed == false && squad.hitMap)
-            {
-                foreach (Mercenary merc in squad.mercenaries)
-                {
-                    merc.pawn.SetFaction(settlementFaction);
-                }
-                squad.hasLord = false;
-                squad.isDeployed = false;
-                squad.removeDroppedEquipment();
-
-                if (squad.map != null)
-                {
-                    squad.map.lordManager.RemoveLord(squad.lord);
-                    squad.lord = null;
-                    squad.map = null;
-                }
-                squad.hitMap = false;
-
-                if (squad.isExtraSquad)
-                {
-                    militaryCustomizationUtil.mercenarySquads.Remove(squad);
-                    //Log.Message("Squad deleted");
-                    return;
-                } else 
-                { 
-                    squad.getSettlement.cooldownMilitary(); 
-                }
-
-                //Log.Message("Reseting Squad");
-                militaryCustomizationUtil.checkMilitaryUtilForErrors();
-                squad.OutfitSquad(squad.outfit);
-                
-
             }
         }
     }

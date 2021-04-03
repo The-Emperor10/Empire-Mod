@@ -325,8 +325,8 @@ namespace FactionColonies
             else
             {
                 //if settlement is foreign
-                settlementOfMilitaryForce.sendMilitary(evt.settlementFCDefending.mapLocation, evt.planetName, "defendFriendlySettlement", -1, evt.militaryForceAttackingFaction);
-                Find.LetterStack.ReceiveLetter("Military Action", TranslatorFormattedStringExtensions.Translate("ForeignMilitarySwitch", settlementOfMilitaryForce.name, factionfc.returnSettlementByLocation(evt.location, evt.planetName).name, evt.militaryForceDefending.militaryLevel), LetterDefOf.NeutralEvent);
+                settlementOfMilitaryForce.SendMilitary(evt.settlementFCDefending.mapLocation, evt.planetName, SettlementFC.MilitaryJob.Defend, -1, evt.militaryForceAttackingFaction);
+                Find.LetterStack.ReceiveLetter("Military Action", "ForeignMilitarySwitch".Translate(settlementOfMilitaryForce.name, factionfc.returnSettlementByLocation(evt.location, evt.planetName).name, evt.militaryForceDefending.militaryLevel), LetterDefOf.NeutralEvent);
 
 
             }

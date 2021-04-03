@@ -46,7 +46,7 @@ namespace FactionColonies
         public override void DoWindowContents(Rect rect) 
         {
             FactionFC faction = Find.World.GetComponent<FactionFC>();
-            if(faction.militaryCustomizationUtil.DeployedSquads.Count() == 0)
+            if(!faction.militaryCustomizationUtil.DeployedSquads.Any())
             {
                 this.Close();
             }
@@ -84,7 +84,7 @@ namespace FactionColonies
                         }));
                     }
                 }
-                if (list.Count() == 0)
+                if (!list.Any())
                 {
                     list.Add(new FloatMenuOption("No squads available", null));
                 }
@@ -100,7 +100,6 @@ namespace FactionColonies
                 {
                     selectedSquad.order = MilitaryOrders.Attack;
                     Messages.Message(selectedSquad.outfit.name + " are now charging the enemy.", MessageTypeDefOf.NeutralEvent);
-                    //selectedSquad.orderLocation = Position;
                 }
             }
             if (Widgets.ButtonTextSubtle(commandMove, "Move"))
@@ -127,7 +126,7 @@ namespace FactionColonies
                 if (selectedSquad != null)
                 {
                     Messages.Message(selectedSquad.outfit.name + " are now leaving the map.", MessageTypeDefOf.NeutralEvent);
-                    selectedSquad.order = MilitaryOrders.Leave;
+                    selectedSquad.Undeploy();
                 }
             }
 
