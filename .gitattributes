@@ -1,0 +1,16 @@
+# Set line ending to default for platform on checkout
+* text=auto
+
+# Text files (just in case git doesnt autodetect it)
+*.cs text
+*.xml text
+
+# Solution files should always be CRLF
+*.sln text eol=crlf
+*.csproj text eol=crlf
+
+# Binary files (just in case git doesnt autodetect it)
+*.jpg binary
+*.png binary
+*.dll binary
+*.zip binary
