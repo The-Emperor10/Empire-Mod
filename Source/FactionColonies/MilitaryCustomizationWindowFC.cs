@@ -610,73 +610,74 @@ namespace FactionColonies
 		}
 	}
 
-	public class MilitaryOrders
+	public enum MilitaryOrder
 	{
-		public static int Standby = 1;
-		public static int Attack = 2;
-		public static int MoveTo = 3;
-		public static int RecoverWounded = 4;
-		public static int Leave = 5;
-
+        None,
+		Standby,
+		Attack,
+		MoveTo,
+		RecoverWounded,
+		Leave
 	}
 
-	public class MercenarySquadFC : IExposable, ILoadReferenceable
-	{
-		public int loadID = -1;
-		public string name;
-		public List<Mercenary> mercenaries = new List<Mercenary>();
-		public List<Mercenary> animals = new List<Mercenary>();
-		public SettlementFC settlement;
-		public bool isTraderCaravan;
-		public bool isDeployed;
-		public bool isExtraSquad;
-		public int order;
-		public int timeDeployed;
-		public IntVec3 orderLocation;
-		public bool hitMap;
-		public bool hasDead;
-		public MilSquadFC outfit;
-		public List<ThingWithComps> UsedWeaponList;
-		public List<Apparel> UsedApparelList;
-		public int tickChanged = 0;
-		public bool hasLord = false;
-		public Map map;
+    public class MercenarySquadFC : IExposable, ILoadReferenceable
+    {
+        public int loadID = -1;
+        public string name;
+        public List<Mercenary> mercenaries = new List<Mercenary>();
+        public List<Mercenary> animals = new List<Mercenary>();
+        public SettlementFC settlement;
+        public bool isTraderCaravan;
+        public bool isDeployed;
+        public bool isExtraSquad;
+        public int timeDeployed;
+        public IntVec3? orderLocation;
+        public bool hitMap;
+        public bool hasDead;
+        public MilSquadFC outfit;
+        public List<ThingWithComps> UsedWeaponList;
+        public List<Apparel> UsedApparelList;
+        public int tickChanged = 0;
+        public Lord lord;
+        public Map map;
         public Quest quest;
 
+        protected MilitaryOrder order;
+        public MilitaryOrder Order => order;
 
-		public void ExposeData()
-		{
-			Scribe_Values.Look<int>(ref loadID, "loadID", -1);
-			Scribe_Values.Look<string>(ref name, "name");
-			Scribe_Collections.Look<Mercenary>(ref mercenaries, "mercenaries", LookMode.Deep);
-			Scribe_Collections.Look<Mercenary>(ref animals, "animals", LookMode.Deep);
-			Scribe_Values.Look<bool>(ref isTraderCaravan, "isTraderCaravan", false);
-			Scribe_Values.Look<bool>(ref isDeployed, "isDeployed", false);
-			Scribe_Values.Look<bool>(ref isExtraSquad, "isExtraSquad", false);
-			Scribe_Values.Look<bool>(ref hitMap, "hitMap", false);
-			Scribe_References.Look<MilSquadFC>(ref outfit, "outfit", false);
-			Scribe_Values.Look<bool>(ref hasDead, "hasDead", false);
-			Scribe_Collections.Look<ThingWithComps>(ref UsedWeaponList, "UsedWeaponList", LookMode.Reference);
-			Scribe_Collections.Look<Apparel>(ref UsedApparelList, "UsedApparelList", LookMode.Reference);
-			Scribe_References.Look<SettlementFC>(ref settlement, "Settlement");
-			Scribe_Values.Look<int>(ref tickChanged, "tickChanged");
-			Scribe_Values.Look<int>(ref order, "order", -1);
-			Scribe_Values.Look<int>(ref timeDeployed, "timeDeployed", -1);
-			Scribe_Values.Look<IntVec3>(ref orderLocation, "orderLocation");
-			Scribe_Values.Look<bool>(ref hasLord, "hasLord", false);
-			Scribe_References.Look<Map>(ref map, "map");
-			Scribe_References.Look<Quest>(ref quest, "quest");
+        public void ExposeData()
+        {
+            Scribe_Values.Look<int>(ref loadID, "loadID", -1);
+            Scribe_Values.Look<string>(ref name, "name");
+            Scribe_Collections.Look<Mercenary>(ref mercenaries, "mercenaries", LookMode.Deep);
+            Scribe_Collections.Look<Mercenary>(ref animals, "animals", LookMode.Deep);
+            Scribe_Values.Look<bool>(ref isTraderCaravan, "isTraderCaravan", false);
+            Scribe_Values.Look<bool>(ref isDeployed, "isDeployed", false);
+            Scribe_Values.Look<bool>(ref isExtraSquad, "isExtraSquad", false);
+            Scribe_Values.Look<bool>(ref hitMap, "hitMap", false);
+            Scribe_References.Look<MilSquadFC>(ref outfit, "outfit", false);
+            Scribe_Values.Look<bool>(ref hasDead, "hasDead", false);
+            Scribe_Collections.Look<ThingWithComps>(ref UsedWeaponList, "UsedWeaponList", LookMode.Reference);
+            Scribe_Collections.Look<Apparel>(ref UsedApparelList, "UsedApparelList", LookMode.Reference);
+            Scribe_References.Look<SettlementFC>(ref settlement, "Settlement");
+            Scribe_Values.Look<int>(ref tickChanged, "tickChanged");
+            Scribe_Values.Look<MilitaryOrder>(ref order, "order", MilitaryOrder.None);
+            Scribe_Values.Look<int>(ref timeDeployed, "timeDeployed", -1);
+            Scribe_Values.Look<IntVec3?>(ref orderLocation, "orderLocation");
+            Scribe_References.Look<Lord>(ref lord, "lord");
+            Scribe_References.Look<Map>(ref map, "map");
+            Scribe_References.Look<Quest>(ref quest, "quest");
         }
 
         public string GetUniqueLoadID()
-		{
-			return "MercenarySquadFC_" + this.loadID;
-		}
+        {
+            return "MercenarySquadFC_" + this.loadID;
+        }
 
-		public MercenarySquadFC()
-		{
+        public MercenarySquadFC()
+        {
 
-		}
+        }
 
         public IEnumerable<Mercenary> EquippedMercenaries => mercenaries.FindAll(merc => (merc.pawn.apparel.WornApparel.Any() || merc.pawn.equipment.AllEquipmentListForReading.Any() || merc.animal != null) && merc.deployable == true);
         public IEnumerable<Pawn> EquippedMercenaryPawns => EquippedMercenaries.Select(merc => merc.pawn);
@@ -698,466 +699,428 @@ namespace FactionColonies
 
 
         public SettlementFC getSettlement
-		{
-			get
-			{
-				if (settlement != null)
-				{
-					return settlement;
-				} else
-				{
-					foreach (SettlementFC settlement in Find.World.GetComponent<FactionFC>().settlements)
-					{
-						if (settlement.militarySquad != null && settlement.militarySquad == this)
-						{
-							this.settlement = settlement;
-							return settlement;
-						}
-					}
+        {
+            get
+            {
+                if (settlement != null)
+                {
+                    return settlement;
+                } else
+                {
+                    foreach (SettlementFC settlement in Find.World.GetComponent<FactionFC>().settlements)
+                    {
+                        if (settlement.militarySquad != null && settlement.militarySquad == this)
+                        {
+                            this.settlement = settlement;
+                            return settlement;
+                        }
+                    }
 
-					return null;
-				}
-			}
-		}
+                    return null;
+                }
+            }
+        }
 
-		public void changeTick()
-		{
-			tickChanged = Find.TickManager.TicksGame;
-		}
+        public void changeTick()
+        {
+            tickChanged = Find.TickManager.TicksGame;
+        }
 
-		public void initiateSquad()
-		{
-			mercenaries = new List<Mercenary>();
-			UsedApparelList = new List<Apparel>();
-			UsedWeaponList = new List<ThingWithComps>();
+        public void initiateSquad()
+        {
+            mercenaries = new List<Mercenary>();
+            UsedApparelList = new List<Apparel>();
+            UsedWeaponList = new List<ThingWithComps>();
 
-			if (outfit == null) 
-			{
-				for (int k = 0; k < 30; k++)
-				{
-					Mercenary pawn = new Mercenary(true);
-					createNewPawn(ref pawn, null);
-					mercenaries.Add(pawn);
-				}
-			}
-			else
-			{
-				for (int k = 0; k < 30; k++)
-				{
-					Mercenary pawn = new Mercenary(true);
-					createNewPawn(ref pawn, outfit.units[k].pawnKind);
-					mercenaries.Add(pawn);
-				}
-			}
-			//Log.Message("count : " + mercenaries.Count().ToString());
-			//this.debugMercenarySquad();
-			if (loadID == -1)
-			{
-				this.loadID = Find.World.GetComponent<FactionFC>().GetNextMercenarySquadID();
-			}
+            if (outfit == null)
+            {
+                for (int k = 0; k < 30; k++)
+                {
+                    Mercenary pawn = new Mercenary(true);
+                    createNewPawn(ref pawn, null);
+                    mercenaries.Add(pawn);
+                }
+            }
+            else
+            {
+                for (int k = 0; k < 30; k++)
+                {
+                    Mercenary pawn = new Mercenary(true);
+                    createNewPawn(ref pawn, outfit.units[k].pawnKind);
+                    mercenaries.Add(pawn);
+                }
+            }
+            //Log.Message("count : " + mercenaries.Count().ToString());
+            //this.debugMercenarySquad();
+            if (loadID == -1)
+            {
+                this.loadID = Find.World.GetComponent<FactionFC>().GetNextMercenarySquadID();
+            }
 
-			if (outfit != null)
-			{
-				OutfitSquad(outfit);
-			}
+            if (outfit != null)
+            {
+                OutfitSquad(outfit);
+            }
 
-		}
+        }
 
-		public void resetNeeds()
-		{
-			foreach (Pawn merc in AllEquippedMercenaryPawns)
-			{
-				if (merc.health == null)
-					merc.health = new Pawn_HealthTracker(merc);
-				HealthUtility.HealNonPermanentInjuriesAndRestoreLegs(merc);
-				if (merc.needs == null)
-					merc.needs = new Pawn_NeedsTracker(merc);
-				if (merc.needs.food == null)
-					merc.needs.food = new Need_Food(merc);
-				if (merc.needs.rest == null)
-					merc.needs.rest = new Need_Rest(merc);
-				if (!merc.AnimalOrWildMan() && merc.needs.joy == null)
-					merc.needs.joy = new Need_Joy(merc);
-				merc.needs.food.CurLevel = merc.needs.food.MaxLevel;
-				merc.needs.rest.CurLevel = merc.needs.rest.MaxLevel;
-				if (!merc.AnimalOrWildMan())
-				{
-					merc.needs.joy.CurLevel = merc.needs.joy.MaxLevel;
-					merc.needs.mood.thoughts.memories.TryGainMemory(DefDatabase<ThoughtDef>.GetNamed("FC_Mercenary"));
-				}
-				
-			}
-		}
+        public void resetNeeds()
+        {
+            foreach (Pawn merc in AllEquippedMercenaryPawns)
+            {
+                if (merc.health == null)
+                    merc.health = new Pawn_HealthTracker(merc);
+                HealthUtility.HealNonPermanentInjuriesAndRestoreLegs(merc);
+                if (merc.needs == null)
+                    merc.needs = new Pawn_NeedsTracker(merc);
+                if (merc.needs.food == null)
+                    merc.needs.food = new Need_Food(merc);
+                if (merc.needs.rest == null)
+                    merc.needs.rest = new Need_Rest(merc);
+                if (!merc.AnimalOrWildMan() && merc.needs.joy == null)
+                    merc.needs.joy = new Need_Joy(merc);
+                merc.needs.food.CurLevel = merc.needs.food.MaxLevel;
+                merc.needs.rest.CurLevel = merc.needs.rest.MaxLevel;
+                if (!merc.AnimalOrWildMan())
+                {
+                    merc.needs.joy.CurLevel = merc.needs.joy.MaxLevel;
+                    merc.needs.mood.thoughts.memories.TryGainMemory(DefDatabase<ThoughtDef>.GetNamed("FC_Mercenary"));
+                }
 
-		public void removeDroppedEquipment()
-		{
-			while (DroppedApparel.Any())
-			{
-				Apparel apparel = DroppedApparel[0];
-				UsedApparelList.Remove(DroppedApparel[0]);
-				if (apparel != null && apparel.Destroyed == false)
-				{
-					apparel.Destroy();
-				}
-			}
+            }
+        }
 
-			while (DroppedWeapons.Any())
-			{
-				ThingWithComps weapon = DroppedWeapons[0];
-				UsedWeaponList.Remove(DroppedWeapons[0]);
-				if (weapon != null && weapon.Destroyed == false)
-				{
-					weapon.Destroy();
-				}
+        public void removeDroppedEquipment()
+        {
+            while (DroppedApparel.Any())
+            {
+                Apparel apparel = DroppedApparel[0];
+                UsedApparelList.Remove(DroppedApparel[0]);
+                if (apparel != null && apparel.Destroyed == false)
+                {
+                    apparel.Destroy();
+                }
+            }
 
-			}
-		}
+            while (DroppedWeapons.Any())
+            {
+                ThingWithComps weapon = DroppedWeapons[0];
+                UsedWeaponList.Remove(DroppedWeapons[0]);
+                if (weapon != null && weapon.Destroyed == false)
+                {
+                    weapon.Destroy();
+                }
 
-		public void createNewAnimal(ref Mercenary merc, PawnKindDef race)
-		{
-			Pawn newPawn;
-			newPawn = PawnGenerator.GeneratePawn(new PawnGenerationRequest(race, FactionColonies.getPlayerColonyFaction(), PawnGenerationContext.NonPlayer, -1, false, false, false, false, false, true, 0, false, false, false, false, false, false, false, false, 0, null, 0, null, null, null, null, null, null, null, null, null, null, null, null));
-			//merc = (Mercenary)newPawn;
-			
-			merc.squad = this;
-			merc.settlement = settlement;
-			//Log.Message(newPawn.Name + "   State: Dead - " + newPawn.health.Dead + "    Apparel Count: " + newPawn.apparel.WornApparel.Count());
-			merc.pawn = newPawn;
-			
-		}
+            }
+        }
 
-		public void createNewPawn(ref Mercenary merc, PawnKindDef race)
-		{
-			if (merc.pawn != null)
-			{
-				//pawn.ParentHolder.remov
-				if (merc.pawn.health != null && merc.pawn.health.Dead == true)
-				{
-					//Log.Message("Passing old pawn to dead mercenaries");
-					//PassPawnToDeadMercenaries(pawn);
-				}
-				else
-				{
+        public void createNewAnimal(ref Mercenary merc, PawnKindDef race)
+        {
+            Pawn newPawn;
+            newPawn = PawnGenerator.GeneratePawn(new PawnGenerationRequest(race, FactionColonies.getPlayerColonyFaction(), PawnGenerationContext.NonPlayer, -1, false, false, false, false, false, true, 0, false, false, false, false, false, false, false, false, 0, null, 0, null, null, null, null, null, null, null, null, null, null, null, null));
+            //merc = (Mercenary)newPawn;
 
-				}
-			}
+            merc.squad = this;
+            merc.settlement = settlement;
+            //Log.Message(newPawn.Name + "   State: Dead - " + newPawn.health.Dead + "    Apparel Count: " + newPawn.apparel.WornApparel.Count());
+            merc.pawn = newPawn;
 
-			PawnKindDef raceChoice;
-			
+        }
 
-			if(race == null)
-			{
-				raceChoice = PawnKindDefOf.Colonist;
-			} else
-			{
-				raceChoice = race;
-			}
+        public void createNewPawn(ref Mercenary merc, PawnKindDef race)
+        {
+            if (merc.pawn != null)
+            {
+                //pawn.ParentHolder.remov
+                if (merc.pawn.health != null && merc.pawn.health.Dead == true)
+                {
+                    //Log.Message("Passing old pawn to dead mercenaries");
+                    //PassPawnToDeadMercenaries(pawn);
+                }
+                else
+                {
+
+                }
+            }
+
+            PawnKindDef raceChoice;
 
 
-			Pawn newPawn;
-			newPawn = PawnGenerator.GeneratePawn(new PawnGenerationRequest(raceChoice, FactionColonies.getPlayerColonyFaction(), PawnGenerationContext.NonPlayer, -1, false, false, false, false, false, true, 0, false, false, false, false, false, false, false, false, 0, null, 0, null, null, null, null, null, null, null, null, null, null, null, null));
-			newPawn.apparel.DestroyAll();
-			newPawn.equipment.DestroyAllEquipment();
-			//merc = (Mercenary)newPawn;
-			merc.squad = this;
-			merc.settlement = settlement;
-			//Log.Message(newPawn.Name + "   State: Dead - " + newPawn.health.Dead + "    Apparel Count: " + newPawn.apparel.WornApparel.Count());
-			merc.pawn = newPawn;
+            if (race == null)
+            {
+                raceChoice = PawnKindDefOf.Colonist;
+            } else
+            {
+                raceChoice = race;
+            }
+
+
+            Pawn newPawn;
+            newPawn = PawnGenerator.GeneratePawn(new PawnGenerationRequest(raceChoice, FactionColonies.getPlayerColonyFaction(), PawnGenerationContext.NonPlayer, -1, false, false, false, false, false, true, 0, false, false, false, false, false, false, false, false, 0, null, 0, null, null, null, null, null, null, null, null, null, null, null, null));
+            newPawn.apparel.DestroyAll();
+            newPawn.equipment.DestroyAllEquipment();
+            //merc = (Mercenary)newPawn;
+            merc.squad = this;
+            merc.settlement = settlement;
+            //Log.Message(newPawn.Name + "   State: Dead - " + newPawn.health.Dead + "    Apparel Count: " + newPawn.apparel.WornApparel.Count());
+            merc.pawn = newPawn;
             Find.WorldPawns.PassToWorld(newPawn);
-		}
+        }
 
-		public void updateSquadStats(int level)
-		{
-			foreach (Mercenary merc in mercenaries)
-			{
-				merc.pawn.skills.GetSkill(SkillDefOf.Shooting).Level = Math.Min(level * 2, 20);
-				merc.pawn.skills.GetSkill(SkillDefOf.Melee).Level = Math.Min(level * 2, 20);
-				merc.pawn.skills.GetSkill(SkillDefOf.Medicine).Level = Math.Min(level * 1, 20);
-			}
-		}
+        public void updateSquadStats(int level)
+        {
+            foreach (Mercenary merc in mercenaries)
+            {
+                merc.pawn.skills.GetSkill(SkillDefOf.Shooting).Level = Math.Min(level * 2, 20);
+                merc.pawn.skills.GetSkill(SkillDefOf.Melee).Level = Math.Min(level * 2, 20);
+                merc.pawn.skills.GetSkill(SkillDefOf.Medicine).Level = Math.Min(level * 1, 20);
+            }
+        }
 
-		public void PassPawnToDeadMercenaries(Mercenary merc)
-		{
-			//If ever add past dead pawns, use this code
-			MilitaryCustomizationUtil util = Find.World.GetComponent<FactionFC>().militaryCustomizationUtil;
-			Mercenary pwn = new Mercenary(true);
-			if (merc.animal != null)
-			{
-				Mercenary animal = new Mercenary(true);
-				animal = merc.animal;
-				//util.deadPawns.Add(animal);
-			}
-			pwn = merc;
+        public void PassPawnToDeadMercenaries(Mercenary merc)
+        {
+            //If ever add past dead pawns, use this code
+            MilitaryCustomizationUtil util = Find.World.GetComponent<FactionFC>().militaryCustomizationUtil;
+            Mercenary pwn = new Mercenary(true);
+            if (merc.animal != null)
+            {
+                Mercenary animal = new Mercenary(true);
+                animal = merc.animal;
+                //util.deadPawns.Add(animal);
+            }
+            pwn = merc;
 
-			//util.deadPawns.Add(pwn);
-			Mercenary pawn2 = new Mercenary(true);
-			createNewPawn(ref pawn2, merc.pawn.kindDef);
-			mercenaries.Replace(merc, pawn2);
-
-
-
-		}
-
-		public void HealPawn(Mercenary merc)
-		{
-			merc.pawn.health.Reset();
-		}
-
-		public void StripSquad()
-		{
-			for(int count = 0; count < 30; count++)
-			{
-				StripPawn(mercenaries[count]);
-			}
-		}
-
-		public void OutfitSquad(MilSquadFC outfit)
-		{
-			FactionFC faction = Find.World.GetComponent<FactionFC>();
-			int count = 0;
-			this.outfit = outfit;
-			UsedWeaponList = new List<ThingWithComps>();
-			UsedApparelList = new List<Apparel>();
-			animals = new List<Mercenary>();
-			foreach (MilUnitFC loadout in outfit.units)
-			{ 
-				if (mercenaries[count].pawn == null || mercenaries[count].pawn.kindDef != loadout.pawnKind || mercenaries[count].pawn.Dead == true)
-				{
-					Mercenary pawn = new Mercenary(true);
-					createNewPawn(ref pawn, loadout.pawnKind);
-					mercenaries.Replace(mercenaries[count], pawn);
-				}
-				StripPawn(mercenaries[count]);
-				HealPawn(mercenaries[count]);
-				if (loadout != null)
-				{
-					//mercenaries[count];
-					//StripPawn(mercenaries[count]);
-					EquipPawn(mercenaries[count], loadout);
-					if (loadout.animal != null)
-					{
-						Mercenary animal = new Mercenary(true);
-						createNewAnimal(ref animal, loadout.animal);
-						animal.handler = mercenaries[count];
-						mercenaries[count].animal = animal;
-						animals.Add(animal);
-					}
-					mercenaries[count].loadout = loadout;
-					if (mercenaries[count].loadout != faction.militaryCustomizationUtil.blankUnit)
-						mercenaries[count].deployable = true;
-					else
-						mercenaries[count].deployable = false;
-				} else
-				{
-				}
-
-				if (mercenaries[count].pawn.equipment.AllEquipmentListForReading != null)
-				{
-					UsedWeaponList.AddRange(mercenaries[count].pawn.equipment.AllEquipmentListForReading);
-
-					//add single check at start of load and mark variable
-				}
-
-				if (mercenaries[count].pawn.apparel.WornApparel != null)
-				{
-					UsedApparelList.AddRange(mercenaries[count].pawn.apparel.WornApparel);
-				}
-
-				count++;
-			}
-
-			//debugMercenarySquad();
-		}
+            //util.deadPawns.Add(pwn);
+            Mercenary pawn2 = new Mercenary(true);
+            createNewPawn(ref pawn2, merc.pawn.kindDef);
+            mercenaries.Replace(merc, pawn2);
 
 
 
-		public void StripPawn(Mercenary merc)
-		{
-			merc.pawn.apparel.DestroyAll();
-			merc.pawn.equipment.DestroyAllEquipment();
-		}
+        }
 
-		public void EquipPawn(Mercenary merc, MilUnitFC loadout)
-		{
-			foreach (Apparel clothes in loadout.defaultPawn.apparel.WornApparel)
-			{
-				if (clothes.def.MadeFromStuff)
-				{
-					Thing thing = ThingMaker.MakeThing(clothes.def, clothes.Stuff);
-					thing.SetColor(Color.white);
-					merc.pawn.apparel.Wear(thing as Apparel);
-				} else
-				{
-					Thing thing = ThingMaker.MakeThing(clothes.def, clothes.Stuff);
-					thing.SetColor(Color.white);
-					merc.pawn.apparel.Wear(thing as Apparel);
-				}
-			}
-			foreach (ThingWithComps weapon in loadout.defaultPawn.equipment.AllEquipmentListForReading)
-			{
-				if (weapon.def.MadeFromStuff)
-				{
-					merc.pawn.equipment.AddEquipment(ThingMaker.MakeThing(weapon.def, weapon.Stuff) as ThingWithComps);
-				} else
-				{
-					merc.pawn.equipment.AddEquipment(ThingMaker.MakeThing(weapon.def) as ThingWithComps);
-				}
+        public void HealPawn(Mercenary merc)
+        {
+            merc.pawn.health.Reset();
+        }
 
-				if(FactionColonies.checkForMod("CETeam.CombatExtended"))
-				{
-					//Log.Message("mod detected");
-					//CE is loaded
-					foreach (ThingComp comp in merc.pawn.AllComps)
-					{
-						if (comp.GetType().ToString() == "CombatExtended.CompInventory")
-						{
-							Type typ = FactionColonies.returnUnknownTypeFromName("CombatExtended.LoadoutPropertiesExtension");
+        public void StripSquad()
+        {
+            for (int count = 0; count < 30; count++)
+            {
+                StripPawn(mercenaries[count]);
+            }
+        }
 
-							//Method not static, so create instance of object and define the parameters to the method.
-							var obj = Activator.CreateInstance(typ);
-							object[] paramArgu = new object[] { merc.pawn.equipment.Primary, comp, 1 };
+        public void OutfitSquad(MilSquadFC outfit)
+        {
+            FactionFC faction = Find.World.GetComponent<FactionFC>();
+            int count = 0;
+            this.outfit = outfit;
+            UsedWeaponList = new List<ThingWithComps>();
+            UsedApparelList = new List<Apparel>();
+            animals = new List<Mercenary>();
+            foreach (MilUnitFC loadout in outfit.units)
+            {
+                if (mercenaries[count].pawn == null || mercenaries[count].pawn.kindDef != loadout.pawnKind || mercenaries[count].pawn.Dead == true)
+                {
+                    Mercenary pawn = new Mercenary(true);
+                    createNewPawn(ref pawn, loadout.pawnKind);
+                    mercenaries.Replace(mercenaries[count], pawn);
+                }
+                StripPawn(mercenaries[count]);
+                HealPawn(mercenaries[count]);
+                if (loadout != null)
+                {
+                    //mercenaries[count];
+                    //StripPawn(mercenaries[count]);
+                    EquipPawn(mercenaries[count], loadout);
+                    if (loadout.animal != null)
+                    {
+                        Mercenary animal = new Mercenary(true);
+                        createNewAnimal(ref animal, loadout.animal);
+                        animal.handler = mercenaries[count];
+                        mercenaries[count].animal = animal;
+                        animals.Add(animal);
+                    }
+                    mercenaries[count].loadout = loadout;
+                    if (mercenaries[count].loadout != faction.militaryCustomizationUtil.blankUnit)
+                        mercenaries[count].deployable = true;
+                    else
+                        mercenaries[count].deployable = false;
+                } else
+                {
+                }
 
-							Traverse.Create(obj).Method("TryGenerateAmmoFor", paramArgu).GetValue();
-							Traverse.Create(obj).Method("LoadWeaponWithRandAmmo", new object[] { merc.pawn.equipment.Primary }).GetValue();
-							
+                if (mercenaries[count].pawn.equipment.AllEquipmentListForReading != null)
+                {
+                    UsedWeaponList.AddRange(mercenaries[count].pawn.equipment.AllEquipmentListForReading);
 
-						}
-					}
+                    //add single check at start of load and mark variable
+                }
 
-				}
-			}
+                if (mercenaries[count].pawn.apparel.WornApparel != null)
+                {
+                    UsedApparelList.AddRange(mercenaries[count].pawn.apparel.WornApparel);
+                }
 
-		}
+                count++;
+            }
 
-		public List<ThingWithComps> DroppedWeapons 
-		{
-			get
-			{
-				List<ThingWithComps> tmpList = new List<ThingWithComps>();
-
-				foreach (ThingWithComps weapon in UsedWeaponList)
-				{
-					if (weapon.ParentHolder is Pawn_EquipmentTracker)
-					{
-						if ((((Pawn_EquipmentTracker)weapon.ParentHolder).pawn.Faction == FactionColonies.getPlayerColonyFaction() || ((Pawn_EquipmentTracker)weapon.ParentHolder).pawn.Faction == Find.FactionManager.OfPlayer)  && ((Pawn_EquipmentTracker)weapon.ParentHolder).pawn.Dead == false)
-						{
-
-						} else
-						{
-							tmpList.Add(weapon);
-						}
-					}
-					else
-					{
-						tmpList.Add(weapon);
-					}
-
-				}
-
-				return tmpList;
-			}
-		}
-
-		public List<Apparel> DroppedApparel
-		{
-			get
-			{
-				List<Apparel> tmpList = new List<Apparel>();
-
-				foreach (Apparel apparel in UsedApparelList)
-				{
-					//Log.Message(apparel.ParentHolder.ToString());
-					//Log.Message(apparel.ParentHolder.ParentHolder.ToString());
-					if (apparel.ParentHolder is Pawn_ApparelTracker)
-					{
-						if ((((Pawn_ApparelTracker)apparel.ParentHolder).pawn.Faction == FactionColonies.getPlayerColonyFaction() || ((Pawn_ApparelTracker)apparel.ParentHolder).pawn.Faction == Find.FactionManager.OfPlayer) && ((Pawn_ApparelTracker)apparel.ParentHolder).pawn.Dead == false)
-						{
-
-						}
-						else
-						{
-							tmpList.Add(apparel);
-						}
-					}
-					else
-					{
-						tmpList.Add(apparel);
-					}
-
-				}
-
-				return tmpList;
-			}
-		}
+            //debugMercenarySquad();
+        }
 
 
 
-		public void debugMercenarySquad()
-		{
-			foreach (Mercenary merc in mercenaries)
-			{
-				Log.Message(merc.pawn.ToString());
-				Log.Message(merc.pawn.health.Dead.ToString());
-				Log.Message(merc.pawn.apparel.WornApparelCount.ToString());
-				Log.Message(merc.pawn.equipment.AllEquipmentListForReading.Count().ToString());
-				//Log.Message(pawn.Name + "   State: Dead - " + pawn.health.Dead + "    Apparel Count: " + pawn.apparel.WornApparel.Count());
-			}
-		}
+        public void StripPawn(Mercenary merc)
+        {
+            merc.pawn.apparel.DestroyAll();
+            merc.pawn.equipment.DestroyAllEquipment();
+        }
 
-		public Mercenary returnPawn(Pawn pawn)
-		{
-			foreach (Mercenary merc in mercenaries)
-			{
-				if (merc.pawn == pawn)
-				{
-					return merc;
-				}
-			}
-			return null;
-		}
+        public void EquipPawn(Mercenary merc, MilUnitFC loadout)
+        {
+            foreach (Apparel clothes in loadout.defaultPawn.apparel.WornApparel)
+            {
+                if (clothes.def.MadeFromStuff)
+                {
+                    Thing thing = ThingMaker.MakeThing(clothes.def, clothes.Stuff);
+                    thing.SetColor(Color.white);
+                    merc.pawn.apparel.Wear(thing as Apparel);
+                } else
+                {
+                    Thing thing = ThingMaker.MakeThing(clothes.def, clothes.Stuff);
+                    thing.SetColor(Color.white);
+                    merc.pawn.apparel.Wear(thing as Apparel);
+                }
+            }
+            foreach (ThingWithComps weapon in loadout.defaultPawn.equipment.AllEquipmentListForReading)
+            {
+                if (weapon.def.MadeFromStuff)
+                {
+                    merc.pawn.equipment.AddEquipment(ThingMaker.MakeThing(weapon.def, weapon.Stuff) as ThingWithComps);
+                } else
+                {
+                    merc.pawn.equipment.AddEquipment(ThingMaker.MakeThing(weapon.def) as ThingWithComps);
+                }
+
+                if (FactionColonies.checkForMod("CETeam.CombatExtended"))
+                {
+                    //Log.Message("mod detected");
+                    //CE is loaded
+                    foreach (ThingComp comp in merc.pawn.AllComps)
+                    {
+                        if (comp.GetType().ToString() == "CombatExtended.CompInventory")
+                        {
+                            Type typ = FactionColonies.returnUnknownTypeFromName("CombatExtended.LoadoutPropertiesExtension");
+
+                            //Method not static, so create instance of object and define the parameters to the method.
+                            var obj = Activator.CreateInstance(typ);
+                            object[] paramArgu = new object[] { merc.pawn.equipment.Primary, comp, 1 };
+
+                            Traverse.Create(obj).Method("TryGenerateAmmoFor", paramArgu).GetValue();
+                            Traverse.Create(obj).Method("LoadWeaponWithRandAmmo", new object[] { merc.pawn.equipment.Primary }).GetValue();
+
+
+                        }
+                    }
+
+                }
+            }
+
+        }
+
+        public List<ThingWithComps> DroppedWeapons
+        {
+            get
+            {
+                List<ThingWithComps> tmpList = new List<ThingWithComps>();
+
+                foreach (ThingWithComps weapon in UsedWeaponList)
+                {
+                    if (weapon.ParentHolder is Pawn_EquipmentTracker)
+                    {
+                        if ((((Pawn_EquipmentTracker)weapon.ParentHolder).pawn.Faction == FactionColonies.getPlayerColonyFaction() || ((Pawn_EquipmentTracker)weapon.ParentHolder).pawn.Faction == Find.FactionManager.OfPlayer) && ((Pawn_EquipmentTracker)weapon.ParentHolder).pawn.Dead == false)
+                        {
+
+                        } else
+                        {
+                            tmpList.Add(weapon);
+                        }
+                    }
+                    else
+                    {
+                        tmpList.Add(weapon);
+                    }
+
+                }
+
+                return tmpList;
+            }
+        }
+
+        public List<Apparel> DroppedApparel
+        {
+            get
+            {
+                List<Apparel> tmpList = new List<Apparel>();
+
+                foreach (Apparel apparel in UsedApparelList)
+                {
+                    //Log.Message(apparel.ParentHolder.ToString());
+                    //Log.Message(apparel.ParentHolder.ParentHolder.ToString());
+                    if (apparel.ParentHolder is Pawn_ApparelTracker)
+                    {
+                        if ((((Pawn_ApparelTracker)apparel.ParentHolder).pawn.Faction == FactionColonies.getPlayerColonyFaction() || ((Pawn_ApparelTracker)apparel.ParentHolder).pawn.Faction == Find.FactionManager.OfPlayer) && ((Pawn_ApparelTracker)apparel.ParentHolder).pawn.Dead == false)
+                        {
+
+                        }
+                        else
+                        {
+                            tmpList.Add(apparel);
+                        }
+                    }
+                    else
+                    {
+                        tmpList.Add(apparel);
+                    }
+
+                }
+
+                return tmpList;
+            }
+        }
+
+
+
+        public void debugMercenarySquad()
+        {
+            foreach (Mercenary merc in mercenaries)
+            {
+                Log.Message(merc.pawn.ToString());
+                Log.Message(merc.pawn.health.Dead.ToString());
+                Log.Message(merc.pawn.apparel.WornApparelCount.ToString());
+                Log.Message(merc.pawn.equipment.AllEquipmentListForReading.Count().ToString());
+                //Log.Message(pawn.Name + "   State: Dead - " + pawn.health.Dead + "    Apparel Count: " + pawn.apparel.WornApparel.Count());
+            }
+        }
+
+        public Mercenary returnPawn(Pawn pawn)
+        {
+            foreach (Mercenary merc in mercenaries)
+            {
+                if (merc.pawn == pawn)
+                {
+                    return merc;
+                }
+            }
+            return null;
+        }
 
         public void DeployTo(Map map, PawnsArrivalModeDef arrivalMode, IntVec3? location = null)
         {
-            // TODO: move here
             FactionFC fc = Find.World.GetComponent<FactionFC>();
-
-            /*SlateRef<MercenarySquadFC> squadRef = new SlateRef<MercenarySquadFC>("$squad");
-            SlateRef<IEnumerable<Pawn>> pawnsRef = new SlateRef<IEnumerable<Pawn>>("$pawns");
-
-            QuestScriptDef questScript = new QuestScriptDef
-            {
-                defaultHidden = true,
-                autoAccept = true,
-                isRootSpecial = true,
-                defName = null,
-            };
-
-            QuestNode_Sequence seq = new QuestNode_Sequence();
-            questScript.root = seq;
-
-            QuestNode_DeploySquad deploySquad = new QuestNode_DeploySquad
-            {
-                squad = squadRef,
-                arrivalMode = new SlateRef<PawnsArrivalModeDef>("$arrivalMode"),
-                map = new SlateRef<Map>("$map"),
-                location = new SlateRef<IntVec3?>("$location")
-            };
-            seq.nodes.Add(deploySquad);
-
-            QuestNode_SetAllApparelLocked apparelLocked = new QuestNode_SetAllApparelLocked()
-            {
-                pawns = pawnsRef
-            };
-            seq.nodes.Add(apparelLocked);
-
-            QuestNode_Signal signal = new QuestNode_Signal()
-            {
-                inSignal = "undeploy",
-                node = new QuestNode_End()
-            };
-            seq.nodes.Add(signal);
-            */
-            QuestScriptDef questScript = DefDatabase<QuestScriptDef>.GetNamed("FC_SquadDeploy");          
+            QuestScriptDef questScript = DefDatabase<QuestScriptDef>.GetNamed("FC_SquadDeploy");
 
             Slate slate = new Slate();
 
@@ -1178,8 +1141,56 @@ namespace FactionColonies
             {
                 // Quest should do all the cleanup
                 quest.End(QuestEndOutcome.Unknown);
-                this.quest = null;
             }
+        }
+
+        public void SetOrder(MilitaryOrder order, IntVec3? location = null)
+        {
+            if (this.lord == null)
+                this.CreateLord();
+
+            this.orderLocation = location ?? this.orderLocation;
+            LordJob job = this.GetLordJobForOrder(order, this.orderLocation);
+            if (job == null)
+                throw new NotImplementedException("Order not implemented " + order.ToString());
+
+            this.order = order;
+            this.lord.SetJob(job);
+            this.lord.GotoToil(lord.Graph.StartingToil);
+            this.lord.ownedPawns.ForEach(p => p.jobs.StopAll());
+        }
+
+        public LordJob GetLordJobForOrder(MilitaryOrder order, IntVec3? location = null)
+        {
+            switch (order)
+            {
+                case MilitaryOrder.Attack:
+                    return new LordJob_SquadAttack(location);
+                case MilitaryOrder.MoveTo:
+                case MilitaryOrder.Standby:
+                    return new LordJob_SquadStandby(location);
+                default:
+                    return null;
+            }
+        }
+
+        public void CreateLord()
+        {
+            this.lord = LordMaker.MakeNewLord(
+                Find.FactionManager.OfPlayer,
+                this.GetLordJobForOrder(MilitaryOrder.Standby),
+                this.map,
+                this.AllDeployedMercenaryPawns);
+        }
+
+        public void DeleteLord()
+        {
+            if (this.lord == null)
+                return;
+
+            this.map.lordManager.RemoveLord(this.lord);
+            this.lord.Cleanup();
+            this.lord = null;
         }
     }
 

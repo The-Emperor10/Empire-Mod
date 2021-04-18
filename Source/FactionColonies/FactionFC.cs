@@ -1176,21 +1176,6 @@ namespace FactionColonies
 
         public void TickMecernaries()
         {
-            mercenaryTick++;
-            if (mercenaryTick > 120)
-            {
-                for (int i = 0; i < militaryCustomizationUtil.mercenarySquads.Count(); i++)
-                {
-                    MercenarySquadFC squad = militaryCustomizationUtil.mercenarySquads[i];
-                    if (squad.isDeployed)
-                    {
-                        MilitaryAI.SquadAI(ref squad);
-                    }
-                }
-
-                mercenaryTick = 0;
-            }
-
             if (militaryCustomizationUtil.fireSupport == null)
             {
                 militaryCustomizationUtil.fireSupport = new List<MilitaryFireSupport>();

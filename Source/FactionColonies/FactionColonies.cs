@@ -1106,8 +1106,20 @@ namespace FactionColonies
 			DebugTools.curTool = tool;
 		}
 
-        public static void CallinAlliedForces(SettlementFC settlement, bool DropPod)
+        public static void CallinAlliedForces(SettlementFC settlement, bool DropPod, int? cost = null)
 		{
+            if (cost.HasValue)
+            {
+                if(PaymentUtil.getSilver() >= cost.Value)
+                {
+                    PaymentUtil.paySilver(cost.Value);
+                }
+                else
+                {
+                    return;
+                }
+            }
+
             if (DropPod)
             {
                 DebugTool tool = new DebugTool("Select Deployment Position", delegate
@@ -1121,92 +1133,6 @@ namespace FactionColonies
             {
                 settlement.militarySquad.DeployTo(Find.CurrentMap, PawnsArrivalModeDefOf.EdgeWalkIn);
             }
-		}
-
-		public static void CallinAlliedForces(SettlementFC settlement, bool DropPod, int cost)
-		{
-			FactionFC factionfc = Find.World.GetComponent<FactionFC>();
-			MercenarySquadFC squad = factionfc.militaryCustomizationUtil.createMercenarySquad(settlement, true);
-			squad.OutfitSquad(squad.settlement.militarySquad.outfit);
-			//Do not use this normally!!!!
-
-			PaymentUtil.paySilver(cost);
-
-			IncidentParms parms = new IncidentParms();
-			parms.target = Find.CurrentMap;
-			parms.faction = FactionColonies.getPlayerColonyFaction();
-			parms.podOpenDelay = 140;
-			parms.points = 999;
-			parms.raidArrivalModeForQuickMilitaryAid = true;
-			parms.raidNeverFleeIndividual = true;
-			parms.raidForceOneIncap = true;
-			parms.raidArrivalMode = PawnsArrivalModeDefOf.CenterDrop;
-			parms.raidStrategy = RaidStrategyDefOf.ImmediateAttackFriendly;
-			parms.raidArrivalModeForQuickMilitaryAid = true;
-
-			squad.updateSquadStats(squad.settlement.settlementMilitaryLevel);
-			squad.resetNeeds();
-
-
-			DebugTool tool = null;
-			IntVec3 DropPosition;
-			tool = new DebugTool("Select Deployment Position", delegate ()
-			{
-				DropPosition = UI.MouseCell();
-				if (DropPod)
-				{
-					parms.spawnCenter = DropPosition;
-					PawnsArrivalModeWorkerUtility.DropInDropPodsNearSpawnCenter(parms, squad.AllEquippedMercenaryPawns.ToList());
-				}
-				else
-				{
-					PawnsArrivalModeWorker_EdgeWalkIn worker = new PawnsArrivalModeWorker_EdgeWalkIn();
-					worker.TryResolveRaidSpawnCenter(parms);
-					worker.Arrive(squad.AllEquippedMercenaryPawns.ToList(), parms);
-					//Log.Message(squad.DeployedMercenaries.Count().ToString());
-
-
-					foreach (Mercenary merc in squad.DeployedMercenaries)
-					{
-
-						merc.pawn.mindState.forcedGotoPosition = DropPosition;
-						JobGiver_ForcedGoto jobGiver_Standby = new JobGiver_ForcedGoto();
-						ThinkResult resultStandby = jobGiver_Standby.TryIssueJobPackage(merc.pawn, new JobIssueParams());
-						bool isValidStandby = resultStandby.IsValid;
-						if (isValidStandby)
-						{
-							//Log.Message("valid");
-							merc.pawn.jobs.StartJob(resultStandby.Job, JobCondition.InterruptForced);
-						}
-					}
-					foreach (Mercenary merc in squad.DeployedAnimalMercenaries)
-					{
-						merc.pawn.mindState.forcedGotoPosition = DropPosition;
-						JobGiver_ForcedGoto jobGiver_Standby = new JobGiver_ForcedGoto();
-						ThinkResult resultStandby = jobGiver_Standby.TryIssueJobPackage(merc.pawn, new JobIssueParams());
-						bool isValidStandby = resultStandby.IsValid;
-						if (isValidStandby)
-						{
-
-							//Log.Message("valid");
-							merc.pawn.jobs.StartJob(resultStandby.Job, JobCondition.InterruptForced);
-						}
-					}
-				}
-
-				squad.isDeployed = true;
-				squad.order = MilitaryOrders.Standby;
-				squad.orderLocation = DropPosition;
-				squad.timeDeployed = Find.TickManager.TicksGame;
-				Find.LetterStack.ReceiveLetter("Military Deployed", "The Military forces of " + squad.settlement.name + " have been deployed to " + Find.CurrentMap.Parent.LabelCap, LetterDefOf.NeutralEvent, new LookTargets(squad.AllEquippedMercenaryPawns));
-				factionfc.traitMilitaristicTickLastUsedExtraSquad = Find.TickManager.TicksGame;
-
-				DebugTools.curTool = null;
-
-			});
-			DebugTools.curTool = tool;
-
-			//UI.UIToMapPosition(UI.MousePositionOnUI).ToIntVec3();
 		}
 
 		public static void FireSupport(SettlementFC settlement, MilitaryFireSupport support)
@@ -1292,48 +1218,8 @@ namespace FactionColonies
 				{
 					list.Add(new FloatMenuOption(settlement.name, delegate ()
 					{
-
-						IncidentParms parms = new IncidentParms();
-						parms.target = Find.CurrentMap;
-						parms.faction = FactionColonies.getPlayerColonyFaction();
-						parms.podOpenDelay = 140;
-						parms.points = 999;
-						parms.raidArrivalModeForQuickMilitaryAid = true;
-						parms.raidNeverFleeIndividual = true;
-						parms.raidForceOneIncap = true;
-						parms.raidArrivalMode = PawnsArrivalModeDefOf.CenterDrop;
-						parms.raidStrategy = RaidStrategyDefOf.ImmediateAttackFriendly;
-						parms.raidArrivalModeForQuickMilitaryAid = true;
-
-						settlement.militarySquad.updateSquadStats(settlement.settlementMilitaryLevel);
-
-
-						DebugTool tool = null;
-						IntVec3 DropPosition;
-						tool = new DebugTool("Select Drop Position", delegate ()
-						{
-							DropPosition = UI.MouseCell();
-							parms.spawnCenter = DropPosition;
-
-							//List<Pawn> list2 = parms.raidStrategy.Worker.SpawnThreats(parms);
-							//parms.raidArrivalMode.Worker.Arrive(list2, parms);
-							settlement.militarySquad.isDeployed = true;
-							settlement.militarySquad.order = MilitaryOrders.Standby;
-							settlement.militarySquad.orderLocation = DropPosition;
-							settlement.militarySquad.timeDeployed = Find.TickManager.TicksGame;
-
-
-
-							PawnsArrivalModeWorkerUtility.DropInDropPodsNearSpawnCenter(parms, settlement.militarySquad.AllEquippedMercenaryPawns.ToList());
-							settlement.militarySquad.isDeployed = true;
-							DebugTools.curTool = null;
-						});
-						DebugTools.curTool = tool;
-
-						//UI.UIToMapPosition(UI.MousePositionOnUI).ToIntVec3();
-
-					}
-					));
+                        CallinAlliedForces(settlement, true);
+					}));
 				}
 			}
 			Find.WindowStack.Add(new FloatMenu(list));

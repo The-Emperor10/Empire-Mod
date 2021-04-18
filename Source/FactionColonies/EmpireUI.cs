@@ -98,7 +98,7 @@ namespace FactionColonies
             {
                 if (selectedSquad != null)
                 {
-                    selectedSquad.order = MilitaryOrders.Attack;
+                    selectedSquad.SetOrder(MilitaryOrder.Attack);
                     Messages.Message(selectedSquad.outfit.name + " are now charging the enemy.", MessageTypeDefOf.NeutralEvent);
                 }
             }
@@ -112,8 +112,7 @@ namespace FactionColonies
                     {
                         Position = UI.MouseCell();
 
-                        selectedSquad.order = MilitaryOrders.Standby;
-                        selectedSquad.orderLocation = Position;
+                        selectedSquad.SetOrder(MilitaryOrder.Standby, Position);
                         Messages.Message(selectedSquad.outfit.name + " are moving to the position and standing by.", MessageTypeDefOf.NeutralEvent);
 
                         DebugTools.curTool = null;
