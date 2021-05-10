@@ -861,31 +861,31 @@ namespace FactionColonies
             Find.TickManager.DebugSetTicksGame(Find.TickManager.TicksGame + GenDate.TicksPerYear);
         }
 
-        [DebugAction("Empire", "Reset All Military Squad Assignments", allowedGameStates = AllowedGameStates.Playing)]
-        private static void resetAllMilitarySquads()
-        {
-            Log.Message("Debug - Reset All Military Squad Assignments");
-            MilitaryCustomizationUtil util = Find.World.GetComponent<FactionFC>().militaryCustomizationUtil;
-            for (int i = util.AllMercenaries.Count() - 1; i >= 0; i--)
-            {
-                if (util.AllMercenaries[i].squad.hasLord)
-                {
-                    util.AllMercenaries[i].squad.map.lordManager.RemoveLord(util.AllMercenaries[i].squad.lord);
-                }
+        //[DebugAction("Empire", "Reset All Military Squad Assignments", allowedGameStates = AllowedGameStates.Playing)]
+        //private static void resetAllMilitarySquads()
+        //{
+        //    Log.Message("Debug - Reset All Military Squad Assignments");
+        //    MilitaryCustomizationUtil util = Find.World.GetComponent<FactionFC>().militaryCustomizationUtil;
+        //    for (int i = util.AllMercenaries.Count() - 1; i >= 0; i--)
+        //    {
+        //        if (util.AllMercenaries[i].squad.hasLord)
+        //        {
+        //            util.AllMercenaries[i].squad.map.lordManager.RemoveLord(util.AllMercenaries[i].squad.lord);
+        //        }
 
-                util.AllMercenaries[i].pawn.Destroy();
-                util.AllMercenaries[i].squad.mercenaries.Remove(util.AllMercenaries[i]);
-            }
+        //        util.AllMercenaries[i].pawn.Destroy();
+        //        util.AllMercenaries[i].squad.mercenaries.Remove(util.AllMercenaries[i]);
+        //    }
 
-            for (int k = util.mercenarySquads.Count() - 1; k >= 0; k--)
-            {
-                util.mercenarySquads[k].settlement.militarySquad = null;
-                util.mercenarySquads.RemoveAt(k);
-            }
+        //    for (int k = util.mercenarySquads.Count() - 1; k >= 0; k--)
+        //    {
+        //        util.mercenarySquads[k].settlement.militarySquad = null;
+        //        util.mercenarySquads.RemoveAt(k);
+        //    }
 
 
-            util.checkMilitaryUtilForErrors();
-        }
+        //    util.checkMilitaryUtilForErrors();
+        //}
 
 
         [DebugAction("Empire", "Make Random Event", allowedGameStates = AllowedGameStates.Playing)]
@@ -1013,11 +1013,11 @@ namespace FactionColonies
                             List<DebugMenuOption> list2 = new List<DebugMenuOption>();
                             foreach (SettlementFC settlement in worldcomp.settlements)
                             {
-                                if (settlement.isMilitaryValid() && settlement.name != evt.settlementFCDefending.name)
+                                if (settlement.IsMilitaryValid && settlement.name != evt.settlementFCDefending.name)
                                 {
                                     list2.Add(new DebugMenuOption(
                                         settlement.name + " - " + settlement.settlementMilitaryLevel + " - Busy: " +
-                                        settlement.isMilitaryBusySilent(), DebugMenuOptionMode.Action, delegate
+                                        settlement.IsMilitaryBusySilent, DebugMenuOptionMode.Action, delegate
                                         {
                                             if (settlement.isMilitaryBusy() == false)
                                             {
@@ -1169,183 +1169,34 @@ namespace FactionColonies
             DebugTools.curTool = tool;
         }
 
-        public static void CallinAlliedForces(SettlementFC settlement, bool DropPod)
+        public static void CallinAlliedForces(SettlementFC settlement, bool DropPod, int? cost = null)
         {
-            if (Find.CurrentMap.Parent is WorldSettlementFC)
+            if (cost.HasValue)
             {
-                Messages.Message("You cannot deploy your military to another settlement!", MessageTypeDefOf.RejectInput);
-                return;
+                if(PaymentUtil.getSilver() >= cost.Value)
+                {
+                    PaymentUtil.paySilver(cost.Value);
+                }
+                else
+                {
+                    return;
+                }
             }
 
-            IncidentParms parms = new IncidentParms
+            if (DropPod)
             {
-                target = Find.CurrentMap,
-                faction = getPlayerColonyFaction(),
-                podOpenDelay = 140,
-                points = 999,
-                raidArrivalModeForQuickMilitaryAid = true,
-                raidNeverFleeIndividual = true,
-                raidForceOneIncap = true,
-                raidArrivalMode = PawnsArrivalModeDefOf.CenterDrop,
-                raidStrategy = RaidStrategyDefOf.ImmediateAttackFriendly
-            };
-            parms.raidArrivalModeForQuickMilitaryAid = true;
-
-            settlement.militarySquad.updateSquadStats(settlement.settlementMilitaryLevel);
-            settlement.militarySquad.resetNeeds();
-
-
-            IntVec3 dropPosition;
-            var tool = new DebugTool("Select Deployment Position", delegate
+                DebugTool tool = new DebugTool("Select Deployment Position", delegate
+                {
+                    DebugTools.curTool = null;
+                    settlement.militarySquad.DeployTo(Find.CurrentMap, PawnsArrivalModeDefOf.CenterDrop, UI.MouseCell());
+                });
+                DebugTools.curTool = tool;
+            }
+            else
             {
-                dropPosition = UI.MouseCell();
-                if (DropPod)
-                {
-                    parms.spawnCenter = dropPosition;
-                    PawnsArrivalModeWorkerUtility.DropInDropPodsNearSpawnCenter(parms,
-                        settlement.militarySquad.AllEquippedMercenaryPawns);
-                }
-                else
-                {
-                    PawnsArrivalModeWorker_EdgeWalkIn worker = new PawnsArrivalModeWorker_EdgeWalkIn();
-                    worker.TryResolveRaidSpawnCenter(parms);
-                    worker.Arrive(settlement.militarySquad.AllEquippedMercenaryPawns, parms);
-                    //Log.Message(settlement.militarySquad.DeployedMercenaries.Count().ToString());
+                settlement.militarySquad.DeployTo(Find.CurrentMap, PawnsArrivalModeDefOf.EdgeWalkIn);
+            }
 
-
-                    foreach (Mercenary merc in settlement.militarySquad.DeployedMercenaries)
-                    {
-                        merc.pawn.mindState.forcedGotoPosition = dropPosition;
-                        JobGiver_ForcedGoto jobGiver_Standby = new JobGiver_ForcedGoto();
-                        ThinkResult resultStandby =
-                            jobGiver_Standby.TryIssueJobPackage(merc.pawn, new JobIssueParams());
-                        bool isValidStandby = resultStandby.IsValid;
-                        if (isValidStandby)
-                        {
-                            //Log.Message("valid");
-                            merc.pawn.jobs.StartJob(resultStandby.Job, JobCondition.InterruptForced);
-                        }
-                    }
-
-                    foreach (Mercenary merc in settlement.militarySquad.DeployedMercenaryAnimals)
-                    {
-                        merc.pawn.mindState.forcedGotoPosition = dropPosition;
-                        JobGiver_ForcedGoto jobGiver_Standby = new JobGiver_ForcedGoto();
-                        ThinkResult resultStandby =
-                            jobGiver_Standby.TryIssueJobPackage(merc.pawn, new JobIssueParams());
-                        bool isValidStandby = resultStandby.IsValid;
-                        if (isValidStandby)
-                        {
-                            //Log.Message("valid");
-                            merc.pawn.jobs.StartJob(resultStandby.Job, JobCondition.InterruptForced);
-                        }
-                    }
-                }
-
-                settlement.militarySquad.isDeployed = true;
-                settlement.militarySquad.order = MilitaryOrders.Standby;
-                settlement.militarySquad.orderLocation = dropPosition;
-                settlement.militarySquad.timeDeployed = Find.TickManager.TicksGame;
-                Find.LetterStack.ReceiveLetter("Military Deployed",
-                    "The Military forces of " + settlement.name + " have been deployed to " +
-                    Find.CurrentMap.Parent.LabelCap, LetterDefOf.NeutralEvent,
-                    new LookTargets(settlement.militarySquad.AllEquippedMercenaryPawns));
-                //MilitaryAI.SquadAI(ref settlement.militarySquad);
-
-                DebugTools.curTool = null;
-                settlement.sendMilitary(Find.CurrentMap.Index, Find.World.info.name, "Deploy", 1, null);
-            });
-            DebugTools.curTool = tool;
-
-            //UI.UIToMapPosition(UI.MousePositionOnUI).ToIntVec3();
-        }
-
-        public static void CallinAlliedForces(SettlementFC settlement, bool DropPod, int cost)
-        {
-            FactionFC factionfc = Find.World.GetComponent<FactionFC>();
-            MercenarySquadFC squad = factionfc.militaryCustomizationUtil.createMercenarySquad(settlement, true);
-            squad.OutfitSquad(squad.settlement.militarySquad.outfit);
-            //Do not use this normally!!!!
-
-            PaymentUtil.paySilver(cost);
-
-            IncidentParms parms = new IncidentParms();
-            parms.target = Find.CurrentMap;
-            parms.faction = getPlayerColonyFaction();
-            parms.podOpenDelay = 140;
-            parms.points = 999;
-            parms.raidArrivalModeForQuickMilitaryAid = true;
-            parms.raidNeverFleeIndividual = true;
-            parms.raidForceOneIncap = true;
-            parms.raidArrivalMode = PawnsArrivalModeDefOf.CenterDrop;
-            parms.raidStrategy = RaidStrategyDefOf.ImmediateAttackFriendly;
-            parms.raidArrivalModeForQuickMilitaryAid = true;
-
-            squad.updateSquadStats(squad.settlement.settlementMilitaryLevel);
-            squad.resetNeeds();
-
-
-            DebugTool tool;
-            IntVec3 DropPosition;
-            tool = new DebugTool("Select Deployment Position", delegate
-            {
-                DropPosition = UI.MouseCell();
-                if (DropPod)
-                {
-                    parms.spawnCenter = DropPosition;
-                    PawnsArrivalModeWorkerUtility.DropInDropPodsNearSpawnCenter(parms, squad.AllEquippedMercenaryPawns);
-                }
-                else
-                {
-                    PawnsArrivalModeWorker_EdgeWalkIn worker = new PawnsArrivalModeWorker_EdgeWalkIn();
-                    worker.TryResolveRaidSpawnCenter(parms);
-                    worker.Arrive(squad.AllEquippedMercenaryPawns, parms);
-                    //Log.Message(squad.DeployedMercenaries.Count().ToString());
-
-
-                    foreach (Mercenary merc in squad.DeployedMercenaries)
-                    {
-                        merc.pawn.mindState.forcedGotoPosition = DropPosition;
-                        JobGiver_ForcedGoto jobGiverStandby = new JobGiver_ForcedGoto();
-                        ThinkResult resultStandby = jobGiverStandby.TryIssueJobPackage(merc.pawn, new JobIssueParams());
-                        bool isValidStandby = resultStandby.IsValid;
-                        if (isValidStandby)
-                        {
-                            //Log.Message("valid");
-                            merc.pawn.jobs.StartJob(resultStandby.Job, JobCondition.InterruptForced);
-                        }
-                    }
-
-                    foreach (Mercenary merc in squad.DeployedMercenaryAnimals)
-                    {
-                        merc.pawn.mindState.forcedGotoPosition = DropPosition;
-                        JobGiver_ForcedGoto jobGiver_Standby = new JobGiver_ForcedGoto();
-                        ThinkResult resultStandby =
-                            jobGiver_Standby.TryIssueJobPackage(merc.pawn, new JobIssueParams());
-                        bool isValidStandby = resultStandby.IsValid;
-                        if (isValidStandby)
-                        {
-                            //Log.Message("valid");
-                            merc.pawn.jobs.StartJob(resultStandby.Job, JobCondition.InterruptForced);
-                        }
-                    }
-                }
-
-                squad.isDeployed = true;
-                squad.order = MilitaryOrders.Standby;
-                squad.orderLocation = DropPosition;
-                squad.timeDeployed = Find.TickManager.TicksGame;
-                Find.LetterStack.ReceiveLetter("Military Deployed",
-                    "The Military forces of " + squad.settlement.name + " have been deployed to " +
-                    Find.CurrentMap.Parent.LabelCap, LetterDefOf.NeutralEvent,
-                    new LookTargets(squad.AllEquippedMercenaryPawns));
-                factionfc.traitMilitaristicTickLastUsedExtraSquad = Find.TickManager.TicksGame;
-
-                DebugTools.curTool = null;
-            });
-            DebugTools.curTool = tool;
-
-            //UI.UIToMapPosition(UI.MousePositionOnUI).ToIntVec3();
         }
 
         public static void FireSupport(SettlementFC settlement, MilitaryFireSupport support)
@@ -1414,74 +1265,6 @@ namespace FactionColonies
             });
             DebugTools.curTool = tool;
         }
-
-
-        public static void TurretDrop()
-        {
-        }
-
-        private static void CallInAlliedForcesSelect()
-        {
-            List<FloatMenuOption> list = new List<FloatMenuOption>();
-            foreach (SettlementFC settlement in Find.World.GetComponent<FactionFC>().settlements)
-            {
-                if (settlement.militarySquad != null)
-                {
-                    list.Add(new FloatMenuOption(settlement.name, delegate
-                        {
-                            IncidentParms parms = new IncidentParms();
-                            parms.target = Find.CurrentMap;
-                            parms.faction = getPlayerColonyFaction();
-                            parms.podOpenDelay = 140;
-                            parms.points = 999;
-                            parms.raidArrivalModeForQuickMilitaryAid = true;
-                            parms.raidNeverFleeIndividual = true;
-                            parms.raidForceOneIncap = true;
-                            parms.raidArrivalMode = PawnsArrivalModeDefOf.CenterDrop;
-                            parms.raidStrategy = RaidStrategyDefOf.ImmediateAttackFriendly;
-                            parms.raidArrivalModeForQuickMilitaryAid = true;
-
-                            settlement.militarySquad.updateSquadStats(settlement.settlementMilitaryLevel);
-
-
-                            DebugTool tool = null;
-                            IntVec3 DropPosition;
-                            tool = new DebugTool("Select Drop Position", delegate
-                            {
-                                DropPosition = UI.MouseCell();
-                                parms.spawnCenter = DropPosition;
-
-                                //List<Pawn> list2 = parms.raidStrategy.Worker.SpawnThreats(parms);
-                                //parms.raidArrivalMode.Worker.Arrive(list2, parms);
-                                settlement.militarySquad.isDeployed = true;
-                                settlement.militarySquad.order = MilitaryOrders.Standby;
-                                settlement.militarySquad.orderLocation = DropPosition;
-                                settlement.militarySquad.timeDeployed = Find.TickManager.TicksGame;
-
-
-                                PawnsArrivalModeWorkerUtility.DropInDropPodsNearSpawnCenter(parms,
-                                    settlement.militarySquad.AllEquippedMercenaryPawns);
-                                settlement.militarySquad.isDeployed = true;
-                                DebugTools.curTool = null;
-                            });
-                            DebugTools.curTool = tool;
-
-                            //UI.UIToMapPosition(UI.MousePositionOnUI).ToIntVec3();
-                        }
-                    ));
-                }
-            }
-
-            Find.WindowStack.Add(new FloatMenu(list));
-        }
-
-
-        [DebugAction("Empire", "Call In Allied Forces", allowedGameStates = AllowedGameStates.PlayingOnMap)]
-        private static void CallInAlliedForcesDebug()
-        {
-            CallInAlliedForcesSelect();
-        }
-
 
         [DebugAction("Empire", "Level Up Faction", allowedGameStates = AllowedGameStates.PlayingOnMap)]
         private static void LevelUpFaction()

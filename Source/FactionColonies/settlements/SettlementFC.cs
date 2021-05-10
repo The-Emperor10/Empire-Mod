@@ -9,7 +9,23 @@ namespace FactionColonies
 {
     public class SettlementFC : IExposable, ILoadReferenceable
     {
+        public enum MilitaryJob
+        {
+            None,
+            Raid,
+            Deploy,
+            Enslave,
+            Capture,
+            Defend,
+            Cooldown,
+        }
+        
         public WorldSettlementFC worldSettlement;
+        
+        public bool IsMilitarySquadValidSilent => militarySquad != null;
+        public bool IsMilitaryBusySilent => militaryBusy;
+        public bool IsMilitaryValid => settlementMilitaryLevel > 0;
+        
 
         public string GetUniqueLoadID()
         {
@@ -575,7 +591,7 @@ namespace FactionColonies
             //Military
             Scribe_Values.Look(ref militaryBusy, "militaryBusy");
             Scribe_Values.Look(ref militaryLocation, "militaryLocation");
-            Scribe_Values.Look(ref militaryJob, "militaryJob");
+            Scribe_Values.Look<MilitaryJob>(ref militaryJob, "militaryJob");
             Scribe_References.Look(ref militaryEnemy, "militaryEnemy");
             Scribe_Values.Look(ref isUnderAttack, "isUnderAttack");
             Scribe_References.Look(ref militarySquad, "militarySquad");
@@ -638,7 +654,7 @@ namespace FactionColonies
         public bool militaryBusy;
         public int militaryLocation = -1;
         public string militaryLocationPlanet;
-        public string militaryJob = "";
+        public MilitaryJob militaryJob;
         public Faction militaryEnemy;
         public bool isUnderAttack;
         public MercenarySquadFC militarySquad;
@@ -671,7 +687,7 @@ namespace FactionColonies
             {
                 if (militarySquad.outfit != null)
                 {
-                    if (militarySquad.EquippedMercenaries.Count > 0)
+                    if (militarySquad.EquippedMercenaries.Any())
                     {
                         return true;
                     }
@@ -700,23 +716,6 @@ namespace FactionColonies
             return false;
         }
 
-        public bool isMilitaryBusySilent()
-        {
-            return militaryBusy;
-        }
-
-
-        public bool isMilitaryValid()
-        {
-            if (settlementMilitaryLevel > 0)
-            {
-                //if settlement military is more than level 0
-                return true;
-            }
-
-            return false;
-        }
-
         public bool isTargetOccupied(int location)
         {
             if (Find.World.GetComponent<FactionFC>().militaryTargets.Contains(location))
@@ -728,27 +727,12 @@ namespace FactionColonies
             return false;
         }
 
-        public float Happiness
-        {
-            get { return (float) Math.Round(happiness, 1); }
-        }
+        public float Happiness => (float)Math.Round(this.happiness, 1);
+        public float Unrest => (float)Math.Round(this.unrest, 1);
+        public float Loyalty => (float)Math.Round(this.loyalty, 1);
+        public float Prosperity => (float)Math.Round(this.prosperity, 1);
 
-        public float Unrest
-        {
-            get { return (float) Math.Round(unrest, 1); }
-        }
-
-        public float Loyalty
-        {
-            get { return (float) Math.Round(loyalty, 1); }
-        }
-
-        public float Prosperity
-        {
-            get { return (float) Math.Round(prosperity, 1); }
-        }
-
-        public void sendMilitary(int location, string planet, string job, int timeToFinish, Faction enemy)
+        public void SendMilitary(int location, string planet, MilitaryJob job, int timeToFinish, Faction enemy)
         {
             FactionFC factionfc = Find.World.GetComponent<FactionFC>();
             if (isMilitaryBusy() || isTargetOccupied(location)) return;
@@ -762,13 +746,13 @@ namespace FactionColonies
                 militaryEnemy = enemy;
             }
 
-            if (job != "Deploy")
+            if (job != MilitaryJob.Deploy)
             {
                 Find.World.GetComponent<FactionFC>().militaryTargets.Add(location);
             }
 
 
-            if (militaryJob == "raidEnemySettlement")
+            if (militaryJob == MilitaryJob.Raid)
             {
                 FCEvent tmp = FCEventMaker.MakeEvent(FCEventDefOf.raidEnemySettlement);
                 tmp.hasCustomDescription = true;
@@ -783,7 +767,7 @@ namespace FactionColonies
                     LetterDefOf.NeutralEvent);
             }
 
-            if (militaryJob == "enslaveEnemySettlement")
+            if (militaryJob == MilitaryJob.Enslave)
             {
                 FCEvent tmp = FCEventMaker.MakeEvent(FCEventDefOf.enslaveEnemySettlement);
                 tmp.hasCustomDescription = true;
@@ -798,7 +782,7 @@ namespace FactionColonies
                     LetterDefOf.NeutralEvent);
             }
 
-            if (militaryJob == "captureEnemySettlement")
+            if (militaryJob == MilitaryJob.Capture)
             {
                 FCEvent tmp = FCEventMaker.MakeEvent(FCEventDefOf.captureEnemySettlement);
                 tmp.hasCustomDescription = true;
@@ -813,14 +797,14 @@ namespace FactionColonies
                     LetterDefOf.NeutralEvent);
             }
 
-            if (militaryJob == "defendFriendlySettlement")
+            if (militaryJob == MilitaryJob.Defend)
             {
                 //no event needed here
                 //
                 //Find.LetterStack.ReceiveLetter("militarySent".Translate(), TranslatorFormattedStringExtensions.Translate("militarySentToDefend", name, factionfc.returnSettlementByLocation(location, this.planetName).name), LetterDefOf.NeutralEvent);
             }
 
-            if (militaryJob == "Deploy")
+            if (militaryJob == MilitaryJob.Deploy)
             {
                 //Find.LetterStack.ReceiveLetter("Military Deployed", "The Military forces of " + name + " have been deployed to " + Find.Maps[militaryLocation].Parent.LabelCap,  LetterDefOf.NeutralEvent);
             }
@@ -863,7 +847,7 @@ namespace FactionColonies
             //Process end result here
             //attacker == 0; defender == 1;
 
-            if (militaryJob == "raidEnemySettlement")
+            if (militaryJob == MilitaryJob.Raid)
             {
                 int winner = SimulateBattleFc.FightBattle(militaryForce.createMilitaryForceFromSettlement(this, true),
                     militaryForce.createMilitaryForceFromFaction(militaryEnemy, false));
@@ -935,7 +919,7 @@ namespace FactionColonies
                         new LookTargets(Find.WorldObjects.SettlementAt(militaryLocation)));
                 }
             }
-            else if (militaryJob == "enslaveEnemySettlement")
+            else if (militaryJob == MilitaryJob.Enslave)
             {
                 int winner = SimulateBattleFc.FightBattle(militaryForce.createMilitaryForceFromSettlement(this, true),
                     militaryForce.createMilitaryForceFromFaction(militaryEnemy, false));
@@ -972,7 +956,7 @@ namespace FactionColonies
                         new LookTargets(Find.WorldObjects.SettlementAt(militaryLocation)));
                 }
             }
-            else if (militaryJob == "captureEnemySettlement")
+            else if (militaryJob == MilitaryJob.Capture)
             {
                 int winner = SimulateBattleFc.FightBattle(militaryForce.createMilitaryForceFromSettlement(this, true),
                     militaryForce.createMilitaryForceFromFaction(militaryEnemy, false));
@@ -1059,7 +1043,7 @@ namespace FactionColonies
         public void returnMilitary(bool alert)
         {
             militaryBusy = false;
-            militaryJob = "";
+            militaryJob = MilitaryJob.None;
             militaryLocation = -1;
             militaryEnemy = null;
 
@@ -1076,11 +1060,11 @@ namespace FactionColonies
 
             int cooldownReduction = 0;
             if (faction.hasTrait(FCPolicyDefOf.raiders) &&
-                (militaryJob == "raidEnemySettlement" || militaryJob == "enslaveEnemySettlement"))
+                (militaryJob == MilitaryJob.Raid || militaryJob == MilitaryJob.Enslave))
             {
                 cooldownReduction += 60000;
             }
-            else if (militaryJob == "Deploy" &&
+            else if (militaryJob == MilitaryJob.Deploy &&
                      FactionColonies.Settings().deadPawnsIncreaseMilitaryCooldown)
             {
                 List<String> policies = faction.policies.ConvertAll(policy => policy.def.defName);
@@ -1097,7 +1081,7 @@ namespace FactionColonies
                 cooldownReduction -= militarySquad.dead * deadMultiplier;
             }
 
-            militaryJob = "cooldown";
+            militaryJob = MilitaryJob.Cooldown;
             militaryBusy = true;
             militaryLocation = mapLocation;
             militaryEnemy = null;

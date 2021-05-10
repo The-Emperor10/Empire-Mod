@@ -31,14 +31,14 @@ namespace FactionColonies
             Scribe_References.Look(ref settlement, "settlement");
             Scribe_References.Look(ref handler, "handler");
             Scribe_References.Look(ref animal, "animal");
-            Scribe_Deep.Look(ref pawn, "pawn");
+            Scribe_References.Look(ref pawn, "pawn");
             Scribe_Values.Look(ref loadID, "loadID");
 
         }
 
         public string GetUniqueLoadID()
         {
-            return "Mercenary_" + loadID;
+            return $"Mercenary_{loadID}";
         }
 
 

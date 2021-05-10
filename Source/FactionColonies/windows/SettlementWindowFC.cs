@@ -550,20 +550,16 @@ namespace FactionColonies
                                     foreach (SettlementFC settlement in Find.World.GetComponent<FactionFC>().settlements
                                     )
                                     {
-                                        if (settlement.isMilitaryValid() && settlement != homeSettlement)
+                                        if (settlement.IsMilitaryValid && settlement != homeSettlement)
                                         {
                                             //if military is valid to use.
 
                                             settlementList.Add(new FloatMenuOption(
                                                 settlement.name + " " + "ShortMilitary".Translate() + " " +
                                                 settlement.settlementMilitaryLevel + " - " + "FCAvailable".Translate() +
-                                                ": " + (!settlement.isMilitaryBusySilent()).ToString(), delegate
+                                                ": " + (!settlement.IsMilitaryBusySilent).ToString(), delegate
                                                 {
-                                                    if (settlement.isMilitaryBusy())
-                                                    {
-                                                        //military is busy
-                                                    }
-                                                    else
+                                                    if (!settlement.isMilitaryBusy())
                                                     {
                                                         MilitaryUtilFC.changeDefendingMilitaryForce(evt, settlement);
                                                     }

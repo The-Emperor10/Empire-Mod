@@ -420,7 +420,7 @@ namespace FactionColonies
                         defaultLabel = "AttackSettlement".Translate(),
                         defaultDesc = "",
                         icon = TexLoad.iconMilitary,
-                        action = delegate
+                        action = () =>
                         {
                             List<FloatMenuOption> list = new List<FloatMenuOption>();
 
@@ -431,35 +431,29 @@ namespace FactionColonies
 
                                     foreach (SettlementFC settlement in worldcomp.settlements)
                                     {
-                                        if (settlement.isMilitaryValid())
+                                        if (settlement.IsMilitaryValid)
                                         {
                                             //if military is valid to use.
+                                            var sMilitary = "ShortMilitary".Translate().ToString();
+                                            var milLevel = settlement.settlementMilitaryLevel.ToString();
+                                            var avail = "FCAvailable".Translate().ToString();
+                                            var busy = (!settlement.IsMilitaryBusySilent).ToString();
+                                            var label = $"{settlement.name} {sMilitary} {milLevel} - {avail} : {busy}";
 
-                                            settlementList.Add(new FloatMenuOption(
-                                                settlement.name + " " + "ShortMilitary".Translate() + " " +
-                                                settlement.settlementMilitaryLevel + " - " +
-                                                "FCAvailable".Translate() + ": " +
-                                                (!settlement.isMilitaryBusySilent()).ToString(), delegate
+                                            settlementList.Add(new FloatMenuOption(label, () =>
+                                            {
+                                                if (!settlement.isMilitaryBusy())
                                                 {
-                                                    if (settlement.isMilitaryBusy())
-                                                    {
-                                                    }
-                                                    else
-                                                    {
-                                                        RelationsUtilFC.attackFaction(faction);
+                                                    RelationsUtilFC.attackFaction(faction);
 
-                                                        settlement.sendMilitary(tile, Find.World.info.name,
-                                                            "captureEnemySettlement", 60000, faction);
-
-
-                                                        //simulateBattleFC.FightBattle(militaryForce.createMilitaryForceFromSettlement(settlement), militaryForce.createMilitaryForceFromEnemySettlement(faction));
-                                                    }
+                                                    settlement.SendMilitary(tile, Find.World.info.name,
+                                                        SettlementFC.MilitaryJob.Capture, 60000, faction);
                                                 }
-                                            ));
+                                            }));
                                         }
                                     }
 
-                                    if (settlementList.Count == 0)
+                                    if (!settlementList.Any())
                                     {
                                         settlementList.Add(new FloatMenuOption("NoValidMilitaries".Translate(),
                                             null));
@@ -477,14 +471,14 @@ namespace FactionColonies
 
                                 foreach (SettlementFC settlement in worldcomp.settlements)
                                 {
-                                    if (settlement.isMilitaryValid())
+                                    if (settlement.IsMilitaryValid)
                                     {
                                         //if military is valid to use.
 
                                         settlementList.Add(new FloatMenuOption(
                                             settlement.name + " " + "ShortMilitary".Translate() + " " +
                                             settlement.settlementMilitaryLevel + " - " + "FCAvailable".Translate() +
-                                            ": " + (!settlement.isMilitaryBusySilent()).ToString(), delegate
+                                            ": " + (!settlement.IsMilitaryBusySilent).ToString(), delegate
                                             {
                                                 if (settlement.isMilitaryBusy())
                                                 {
@@ -494,8 +488,8 @@ namespace FactionColonies
                                                 {
                                                     RelationsUtilFC.attackFaction(faction);
 
-                                                    settlement.sendMilitary(tile, Find.World.info.name,
-                                                        "raidEnemySettlement", 60000, faction);
+                                                    settlement.SendMilitary(tile, Find.World.info.name,
+                                                        SettlementFC.MilitaryJob.Raid, 60000, faction);
 
 
                                                     //simulateBattleFC.FightBattle(militaryForce.createMilitaryForceFromSettlement(settlement), militaryForce.createMilitaryForceFromEnemySettlement(faction));
@@ -527,7 +521,7 @@ namespace FactionColonies
 
                                     foreach (SettlementFC settlement in worldcomp.settlements)
                                     {
-                                        if (settlement.isMilitaryValid())
+                                        if (settlement.IsMilitaryValid)
                                         {
                                             //if military is valid to use.
 
@@ -535,7 +529,7 @@ namespace FactionColonies
                                                 settlement.name + " " + "ShortMilitary".Translate() + " " +
                                                 settlement.settlementMilitaryLevel + " - " +
                                                 "FCAvailable".Translate() + ": " +
-                                                (!settlement.isMilitaryBusySilent()).ToString(), delegate
+                                                (!settlement.IsMilitaryBusySilent).ToString(), delegate
                                                 {
                                                     if (settlement.isMilitaryBusy())
                                                     {
@@ -545,8 +539,8 @@ namespace FactionColonies
                                                     {
                                                         RelationsUtilFC.attackFaction(faction);
 
-                                                        settlement.sendMilitary(tile, Find.World.info.name,
-                                                            "enslaveEnemySettlement", 60000, faction);
+                                                        settlement.SendMilitary(tile, Find.World.info.name,
+                                                            SettlementFC.MilitaryJob.Enslave, 60000, faction);
 
 
                                                         //simulateBattleFC.FightBattle(militaryForce.createMilitaryForceFromSettlement(settlement), militaryForce.createMilitaryForceFromEnemySettlement(faction));
@@ -597,6 +591,7 @@ namespace FactionColonies
             }
         }
 
+        // TODO: die
         [HarmonyPatch(typeof(Pawn), "Kill")]
         class MercenaryDied
         {
@@ -1012,6 +1007,7 @@ namespace FactionColonies
                 }
 
                 roadBuilder.FirstTick();
+                MilitaryAI.FirstTick(this);
 
                 Faction FCf = FactionColonies.getPlayerColonyFaction();
                 if (FCf != null)
@@ -1019,7 +1015,7 @@ namespace FactionColonies
                     FCf.def.techLevel = TechLevel.Undefined;
                     factionIcon = TexLoad.factionIcons.FirstOrFallback(obj => obj.name == factionIconPath,
                         TexLoad.factionIcons.First());
-                    updateFactionIcon(ref FCf, "FactionIcons/" + factionIcon.name);
+                    updateFactionIcon(ref FCf, $"FactionIcons/{factionIcon.name}");
                     factionIconPath = factionIcon.name;
                 }
 
@@ -1030,7 +1026,7 @@ namespace FactionColonies
             FCEventMaker.ProcessEvents(in events);
             billUtility.processBills();
 
-            TickMecernaries();
+            TickMercenaries();
 
 
             //If Player Colony Faction does exists
@@ -1147,60 +1143,8 @@ namespace FactionColonies
             }
         }
 
-        public void TickMecernaries()
+        public void TickMercenaries()
         {
-            mercenaryTick++;
-            if (mercenaryTick > 120)
-            {
-                for (int i = 0; i < militaryCustomizationUtil.mercenarySquads.Count(); i++)
-                    //foreach (MercenarySquadFC squad in militaryCustomizationUtil.mercenarySquads)
-                {
-                    MercenarySquadFC squad = militaryCustomizationUtil.mercenarySquads[i];
-                    if (squad.isDeployed)
-                    {
-                        if (squad.DeployedMercenaries.Count > 0 && squad.isDeployed && squad.hasLord == false)
-                        {
-                            Log.Message("Pawn deployed, creating lord");
-                            Faction faction = FactionColonies.getPlayerColonyFaction();
-                            List<Pawn> pawns = new List<Pawn>();
-                            foreach (Mercenary pawn in squad.DeployedMercenaries)
-                            {
-                                pawn.pawn.mindState.canFleeIndividual = false;
-                                pawns.Add(pawn.pawn);
-                            }
-
-                            foreach (Mercenary pawn in squad.DeployedMercenaryAnimals)
-                            {
-                                pawn.pawn.mindState.canFleeIndividual = false;
-                                pawns.Add(pawn.pawn);
-                            }
-
-
-                            Lord lord = LordMaker.MakeNewLord(faction,
-                                new LordJob_AssistColony(faction, squad.DeployedMercenaries[0].pawn.DutyLocation()),
-                                squad.DeployedMercenaries[0].pawn.Map, pawns);
-                            squad.map = squad.DeployedMercenaries[0].pawn.Map;
-                            squad.lord = lord;
-
-
-                            squad.hasLord = true;
-                        }
-
-                        if (Find.WindowStack.IsOpen(typeof(EmpireUIMercenaryCommandMenu)) == false)
-                        {
-                            //Log.Message("Opening Window");
-                            // menu.focusWhenOpened = false;
-
-                            Find.WindowStack.Add(new EmpireUIMercenaryCommandMenu());
-                        }
-
-                        MilitaryAI.SquadAI(ref squad);
-                    }
-                }
-
-                mercenaryTick = 0;
-            }
-
             if (militaryCustomizationUtil.fireSupport == null)
             {
                 militaryCustomizationUtil.fireSupport = new List<MilitaryFireSupport>();

@@ -103,12 +103,12 @@ namespace FactionColonies
                             }, MenuOptionPriority.High));
 
                         settlementList.AddRange(from foundSettlement in faction.settlements
-                            where foundSettlement.isMilitaryValid() && foundSettlement != settlement
+                            where foundSettlement.IsMilitaryValid && foundSettlement != settlement
                             select new FloatMenuOption(foundSettlement.name + " " + 
                                                        "ShortMilitary".Translate() + " " + 
                                                        foundSettlement.settlementMilitaryLevel + " - " + 
                                                        "FCAvailable".Translate() + ": " + 
-                                                       (!foundSettlement.isMilitaryBusySilent()).ToString(), delegate
+                                                       (!foundSettlement.IsMilitaryBusySilent).ToString(), () =>
                             {
                                 if (foundSettlement.isMilitaryBusy())
                                 {
@@ -290,7 +290,7 @@ namespace FactionColonies
             if (defenderForce.homeSettlement.militarySquad != null &&
                 defenderForce.homeSettlement.militarySquad.AllEquippedMercenaryPawns.Any())
             {
-                friendlies = defenderForce.homeSettlement.militarySquad.EquippedMercenaryPawns;
+                friendlies = defenderForce.homeSettlement.militarySquad.EquippedMercenaryPawns.ToList();
                 foreach (Pawn friendly in friendlies)
                 {
                     Map.mapPawns.RegisterPawn(friendly);

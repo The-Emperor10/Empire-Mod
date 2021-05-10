@@ -46,7 +46,7 @@ namespace FactionColonies
         public override void DoWindowContents(Rect rect) 
         {
             FactionFC faction = Find.World.GetComponent<FactionFC>();
-            if(faction.militaryCustomizationUtil.DeployedSquads.Count() == 0)
+            if(!faction.militaryCustomizationUtil.DeployedSquads.Any())
             {
                 this.Close();
             }
@@ -67,7 +67,7 @@ namespace FactionColonies
                 squadText = "Select Deployed Squad";
             } else
             {
-                squadText = selectedSquad.getSettlement.name + "'s " + selectedSquad.outfit.name;
+                squadText = $"{selectedSquad.getSettlement.name}'s {selectedSquad.outfit.name}";
             }
 
             //Select a squad
@@ -78,7 +78,7 @@ namespace FactionColonies
                 {
                     if (squad.getSettlement != null)
                     {
-                        list.Add(new FloatMenuOption(squad.getSettlement.name + "'s " + squad.outfit.name, delegate
+                        list.Add(new FloatMenuOption($"{squad.getSettlement.name}'s {squad.outfit.name}", delegate
                         {
                             selectedSquad = squad;
                         }));
@@ -98,9 +98,8 @@ namespace FactionColonies
             {
                 if (selectedSquad != null)
                 {
-                    selectedSquad.order = MilitaryOrders.Attack;
-                    Messages.Message(selectedSquad.outfit.name + " are now charging the enemy.", MessageTypeDefOf.NeutralEvent);
-                    //selectedSquad.orderLocation = Position;
+                    selectedSquad.SetOrder(MilitaryOrder.Attack);
+                    Messages.Message($"{selectedSquad.outfit.name} are now charging the enemy.", MessageTypeDefOf.NeutralEvent);
                 }
             }
             if (Widgets.ButtonTextSubtle(commandMove, "Move"))
@@ -113,9 +112,8 @@ namespace FactionColonies
                     {
                         Position = UI.MouseCell();
 
-                        selectedSquad.order = MilitaryOrders.Standby;
-                        selectedSquad.orderLocation = Position;
-                        Messages.Message(selectedSquad.outfit.name + " are moving to the position and standing by.", MessageTypeDefOf.NeutralEvent);
+                        selectedSquad.SetOrder(MilitaryOrder.MoveTo, Position);
+                        Messages.Message($"{selectedSquad.outfit.name} are moving to the position and standing by.", MessageTypeDefOf.NeutralEvent);
 
                         DebugTools.curTool = null;
                     });
@@ -126,8 +124,9 @@ namespace FactionColonies
             {
                 if (selectedSquad != null)
                 {
-                    selectedSquad.order = MilitaryOrders.Leave;
-                    Messages.Message(selectedSquad.outfit.name + " are now leaving the map. " + selectedSquad.dead + " dead.", 
+                    selectedSquad.Undeploy();
+                    Messages.Message(
+                        $"{selectedSquad.outfit.name} are now leaving the map. {selectedSquad.dead.ToString()} dead.", 
                         MessageTypeDefOf.NeutralEvent);
                 }
             }
